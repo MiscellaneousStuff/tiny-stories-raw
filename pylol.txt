@@ -1,0 +1,4119 @@
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""PyLoL module: https://github.com/MiscellaneousStuff/pylol ."""
+
+__version__ = "1.0.0"
+
+import os
+
+def load_tests(loader, standard_tests, unused_pattern):
+    """Our tests end in `_test.py`, so need to ovveride the test directory."""
+    this_dir = os.path.dirname(__file__)
+    package_tests = loader.discover(start_dir=this_dir, pattern="*_test.py")
+    standard_tests.addTests(package_tests)
+    return standard_tests
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A base agent to write custom scripted agents."""
+
+from pylol.lib import actions
+
+class BaseAgent(object):
+    """A base agent to write custom scripted agents.
+
+    It can also act as a passive agent that does nothing but no-ops.
+    """
+
+    def __init__(self):
+        self.reward = 0
+        self.episodes = 0
+        self.steps = 0
+        self.obs_spec = None
+        self.action_spec = None
+    
+    def setup(self, obs_spec, action_spec):
+        self.obs_spec = obs_spec
+        self.action_spec = action_spec
+    
+    def reset(self):
+        self.episodes += 1
+    
+    def step(self, obs):
+        self.steps += 1
+        self.reward += obs.reward
+        
+        print("CURRENT REWARD FOR ENTIRE SESSON:", self.reward)
+        
+        return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A random agent for League of Legends."""
+
+import numpy
+
+from pylol.agents import base_agent
+from pylol.lib import actions
+
+class RandomAgent(base_agent.BaseAgent):
+    """A random agent for league of legends."""
+
+    def step(self, obs):
+        super(RandomAgent, self).step(obs)
+
+        #print("OBS:", obs.observation["me_unit"])
+        function_id = numpy.random.choice(obs.observation["available_actions"])        
+        args = [[numpy.random.randint(0, size) for size in arg.sizes]
+                for arg in self.action_spec[0].functions[function_id].args]        
+        return actions.FunctionCall(function_id, args)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Hardcoded scripted agent."""
+
+import numpy
+
+from pylol.agents import base_agent
+from pylol.lib import actions
+from pylol.lib import features
+from pylol.lib import point
+
+FUNCTIONS = actions.FUNCTIONS
+
+class ScriptedAgent(base_agent.BaseAgent):
+    """Throws Q's at the other player at the moment."""
+
+    def step(self, obs):
+        super(ScriptedAgent, self).step(obs)
+        
+        me_position = point.Point(obs.observation["me_unit"].position_x,
+                       obs.observation["me_unit"].position_y)
+
+        enemy_position = point.Point(obs.observation["enemy_unit"].position_x,
+                          obs.observation["enemy_unit"].position_y)
+
+        return actions.FunctionCall(2, [[0], enemy_position])
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Test run the client."""
+
+import os
+
+from absl import flags
+from absl import app
+
+from pylol.agents import base_agent, random_agent, scripted_agent
+from pylol.env import lol_env
+from pylol.env import run_loop
+from pylol.lib import point_flag
+
+FLAGS = flags.FLAGS
+point_flag.DEFINE_point("feature_map_size", "16000",
+                        "Resolution for screen feature layers.")
+point_flag.DEFINE_point("feature_move_range", "8",
+                        "Resolution for screen feature layers.")
+flags.DEFINE_string("players", "Ezreal.BLUE,Ezreal.PURPLE", "Formatted list of champions and teams")
+flags.DEFINE_string("map", "Old Summoners Rift", "Name of league map to use.")
+flags.DEFINE_bool("save_replay", False, "Whether to save a replay at the end.")
+flags.DEFINE_bool("run_client", False, "Whether to run the league client or not.")
+flags.DEFINE_string("agent", "random", "Which inbuilt agent to run")
+flags.DEFINE_integer("max_episodes", 0, "Maximum number of episodes to run")
+flags.DEFINE_integer("max_steps", 0, "Maximum number of steps to run")
+flags.DEFINE_string("host", "localhost", "Host of GameServer and Redis")
+#flags.DEFINE_string("config_path", "./config_dirs.txt", "File containing directories of GameServer, League client respectively")
+flags.DEFINE_string("config_path", "./config.txt", "File containing directories of GameServer, League client respectively")
+flags.DEFINE_bool("enable_cooldowns", False, "Toggles cooldowns (default is False)")
+flags.DEFINE_bool("manacosts_enabled", False, "Toggles mana costs for spells (default is False)")
+flags.DEFINE_bool("minion_spawns_enabled", False, "Toggles spawning of minions (default is False")
+flags.DEFINE_float("multiplier", 7.5, "How many observations and actions per second (default is 7.5)")
+flags.DEFINE_float("step_multiplier", 1, "Real-time step multiplier so 2 would be 2x real time (default is 1)")
+
+def main(unused_argv):
+    players = []
+    agents = []
+
+    for player in FLAGS.players.split(","):
+        c, t = player.split(".")
+        players.append(lol_env.Agent(champion=c, team=t))
+        if FLAGS.agent == "base":
+            agents.append(base_agent.BaseAgent())
+        elif FLAGS.agent == "random":
+            agents.append(random_agent.RandomAgent())
+        elif FLAGS.agent == "scripted":
+            agents.append(scripted_agent.ScriptedAgent())
+
+    with lol_env.LoLEnv(
+        host=FLAGS.host,
+        map_name=FLAGS.map,
+        players=players,
+        agent_interface_format=lol_env.parse_agent_interface_format(
+            feature_map=FLAGS.feature_map_size,
+            feature_move_range=FLAGS.feature_move_range),
+        human_observer=FLAGS.run_client,
+        cooldowns_enabled=FLAGS.enable_cooldowns,
+        manacosts_enabled=FLAGS.manacosts_enabled,
+        config_path=FLAGS.config_path,
+        multiplier=FLAGS.multiplier,
+        step_multiplier=FLAGS.step_multiplier) as env:
+
+        run_loop.run_loop(agents, env, max_episodes=FLAGS.max_episodes,
+                          max_steps=FLAGS.max_steps)
+        if FLAGS.save_replay:
+            env.save_replay(agents[0].__class__.__name__)
+
+def entry_point():
+    app.run(main)
+
+if __name__ == "__main__":
+    app.run(main)
+
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Print the list of defined maps."""
+
+from absl import app
+from pylol import maps
+
+def main(unused_argv):
+    print(maps.get_maps())
+    
+    for _, map_class in sorted(maps.get_maps().items()):
+        mp = map_class()
+        print(mp)
+
+if __name__ == "__main__":
+    app.run(main)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Run multiple games at once.
+
+Current example runs 4 concurrent 5v5 games. Not fully tested, don't trust at this stage.
+"""
+
+import subprocess
+
+from absl import flags
+from absl import app
+
+from pylol.lib import run_parallel
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string("players", "Ezreal.BLUE,Ezreal.PURPLE", "Formatted list of champions and teams")
+flags.DEFINE_string("map", "Old Summoners Rift", "Name of league map to use.")
+flags.DEFINE_bool("save_replay", True, "Whether to save a replay at the end.")
+flags.DEFINE_integer("count", 1, "Number of games to run at once")
+flags.DEFINE_string("agent", "random", "Which inbuilt agent to run")
+flags.DEFINE_integer("max_episodes", 0, "Maximum number of episodes to run")
+flags.DEFINE_integer("max_steps", 0, "Maximum number of steps to run")
+flags.DEFINE_string("host", "localhost", "Host of GameServer and Redis")
+flags.DEFINE_string("config_path", "./config_dirs.txt", "File containing directories of gameserver, lol client and redis conf respectively")
+flags.DEFINE_bool("enable_cooldowns", False, "Toggles cooldowns (default is False)")
+flags.DEFINE_bool("manacosts_enabled", False, "Toggles mana costs for spells (default is False)")
+flags.DEFINE_bool("minion_spawns_enabled", False, "Toggles spawning of minions (default is False")
+
+def main(unused_argv):
+    parallel = run_parallel.RunParallel()
+
+    args = ["python3", 
+    "-m", "pylol.bin.client", 
+    "--players", str(FLAGS.players),
+    "--map", str(FLAGS.map),
+    "--save_replay", str(FLAGS.save_replay),
+    "--max_steps", str(FLAGS.max_steps),
+    "--max_episodes", str(FLAGS.max_episodes),
+    "--agent", str(FLAGS.agent),
+    "--players", str(FLAGS.players),
+    "--host", str(FLAGS.host),
+    "--enable_cooldowns", str(FLAGS.enable_cooldowns),
+    "--manacosts_enabled", str(FLAGS.manacosts_enabled),
+    "--minion_spawns_enabled", str(FLAGS.minion_spawns_enabled)]
+
+    try:
+        parallel.run((subprocess.Popen, args) for _ in range(FLAGS.count))
+    except KeyboardInterrupt:
+        print("CLOSE EVERYTHING :D")
+
+def entry_point():
+    app.run(main)
+
+if __name__ == "__main__":
+    app.run(main)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Watch a replay which was made using pylol using the league client."""
+
+from configparser import ConfigParser
+
+from pylol.lib import lol_process
+from pylol import run_configs
+from pylol.env import lol_env
+from pylol.lib import portspicker
+from pylol.lib import replay
+
+from absl import flags
+from absl import app
+
+flags.DEFINE_string("replay_path", "", "Path to the replay file")
+flags.DEFINE_string("config_path", "./config.txt", "File containing directories of GameServer, League client respectively")
+flags.DEFINE_string("host", "localhost", "Host for GameServer and league client")
+flags.DEFINE_string("players", "Ezreal.BLUE,Ezreal.PURPLE", "NOTE: TEMPORARY")
+
+FLAGS = flags.FLAGS
+
+def main(unused_argv):
+    try:
+        with open(FLAGS.config_path) as f:
+            cfg = ConfigParser()
+            cfg.read_string(f.read())
+            game_server_dir = cfg.get("dirs", "gameserver")
+            client_dir = cfg.get("dirs", "lolclient")
+    except:
+        raise IOError("Could not open config file: '%s'" % FLAGS.config_path)
+
+    try:
+        with open(FLAGS.replay_path) as f:
+            replay_info = replay.get_replay_info(f.read())
+    except:
+        raise IOError("Could not open replay file: '%s'" % FLAGS.config_path)
+
+    try:
+        run_config = run_configs.get(game_server_dir=game_server_dir)
+        ports = portspicker.pick_contiguous_unused_ports(2)
+        client_port = ports[0]
+        redis_port = ports[1]
+        with run_config.start(replay_path=FLAGS.replay_path,
+                                host=FLAGS.host,
+                                human_observer=True,
+                                players=replay_info["players"],
+                                multiplier=replay_info["multiplier"],
+                                step_multiplier=1,
+                                client_port=client_port,
+                                redis_port=redis_port,
+                                client_dir=client_dir,
+                                map_name=replay_info["map"],
+                                cooldowns_enabled=False,
+                                manacosts_enabled=False,
+                                minion_spawns_enabled=False) as controller:
+            controller.connect()
+            for _ in range(replay_info["action_count"]):
+                controller.observe()
+    except KeyboardInterrupt:
+        pass
+
+def entry_point():
+    app.run(main)
+
+if __name__ == "__main__":
+    app.run(main)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Print the valid actions."""
+
+from absl import app
+from absl import flags
+
+from pylol.lib import actions
+from pylol.lib import features
+from pylol.lib import point_flag
+
+FLAGS = flags.FLAGS
+point_flag.DEFINE_point("feature_map_size", "16000",
+                        "Resolution for screen feature layers.")
+point_flag.DEFINE_point("feature_move_range", "8",
+                        "Resolution for screen feature layers.")
+
+def main(unused_argv):
+    """Print the valid actions."""
+    feats = features.Features(
+        features.AgentInterfaceFormat(
+            feature_dimensions=features.Dimensions(
+                map=FLAGS.feature_map_size,
+                move_range=FLAGS.feature_move_range
+            )
+        )
+    )
+    action_spec = feats.action_spec()
+    flattened = 0
+    count = 0
+    for func in action_spec.functions:
+        count += 1
+        act_flat = 1
+        for arg in func.args:
+            for size in arg.sizes:
+                act_flat *= size
+        flattened += act_flat
+        print(func.str(True))
+    print("Total base actions:", count)
+    print("Total possible actions (flattened):", flattened)
+
+if __name__ == "__main__":
+    app.run(main)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""An env wrapper to print the available actions."""
+
+from pylol.env import base_env_wrapper
+
+class AvailableActionsPrinter(base_env_wrapper.BaseEnvWrapper):
+    """An env wrapper to print the available actions."""
+
+    def __init__(self, env):
+        super(AvailableActionsPrinter, self).__init__(env)
+        self.seen = set()
+        self.action_spec = self.action_spec()[0]
+    
+    def step(self, *args, **kwargs):
+        all_obs = super(AvailableActionsPrinter, self).step(*args, **kwargs)
+        for obs in all_obs:
+            for avail in obs["available_actions"]:
+                if avail not in self.seen:
+                    self.seen.add(avail)
+                    self.print(self.action_spec.functions[avail].str(True))
+        return all_obs
+    
+    def print(self, s):
+        print(s)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A base env wrapper so we don't need to override everything every time."""
+
+from pylol.env import environment
+
+class BaseEnvWrapper(environment.Base):
+    """A base env wrapper so we don't need to override everything every time."""
+
+    def __init__(self, env):
+        self.env = env
+    
+    def close(self, *args, **kwargs):
+        return self.env.close(*args, **kwargs)
+    
+    def action_spec(self, *args, **kwargs):
+        return self.env.action_spec(*args, **kwargs)
+
+    def observation_spec(self, *args, **kwargs):
+        return self.env.observation_spec(*args, **kwargs)
+    
+    def reset(self, *args, **kwargs):
+        return self.env.reset(*args, **kwargs)
+    
+    def step(self, *args, **kwargs):
+        return self.env.step(*args, **kwargs)
+    
+    def save_replay(self, *args, **kwargs):
+        return self.env.save_replay(*args, **kwargs)
+    
+    @property
+    def state(self):
+        return self.env.state
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Python RL Environment API."""
+
+import abc
+import collections
+
+import enum
+import six
+
+class TimeStep(collections.namedtuple(
+        'TimeStep', ['step_type', 'reward', 'discount', 'observation'])):
+    """Returned with every call to `step` and `reset` on an environment.
+
+    A `TimeStep` contains the data emitted by an environment at each stop of
+    interaction. A `TimeStep` holds a `step_type`, an `observation`, and an
+    associated `reward` and `discount`.
+
+    The first `TimeStep` in a sequence will have `StepType.FIRST`. The final
+    `TimeStep` will have `StepType.LAST`. All other `TimeStep`s in a sequence will
+    have `StepType.MID.
+
+    Attributes:
+        step_type: A `StepType` enum value.
+        reward: A scalar, or 0 if `step_type` is `StepType.FIRST`, i.e. at the
+            start of a sequence.
+        discount: A discount value in the range `[0, 1]`, or 0 if `step_type`
+            is `StepType.FIRST`, i.e. at the start of a sequence.
+        observation: A NumPy array, or a dict, list or tuple of arrays.
+    """
+    __slots__ = ()
+
+    def first(self):
+        return self.step_type is StepType.FIRST
+    
+    def mid(self):
+        return self.step_type is StepType.MID
+    
+    def last(self):
+        return self.step_type is StepType.LAST
+
+class StepType(enum.IntEnum):
+    """Defines the status of a `TimeStep` within a sequence."""
+    FIRST = 0
+    MID = 1
+    LAST = 2
+
+@six.add_metaclass(abc.ABCMeta)
+class Base(object):
+    """Abstract base class for Python RL environments."""
+
+    @abc.abstractmethod
+    def reset(self):
+        """Starts a new sequence and returns the first `TimeStep` of this sequence.
+
+        Returns:
+            A `TimeStep` namedtuple containing:
+                step_type: A `StepType` of `FIRST`
+                reward: Zero.
+                discount: Zero.
+                observation: A NumPy array, or a dict, list of tuple of arrays
+                    corresponding to `observation_spec()`.
+        """
+    
+    @abc.abstractmethod
+    def step(self, action):
+        """Updates the environment according to the action and returns a `TimeStep`.
+
+        If the environment returned a `TimeStep` with `StepType.LAST` at the
+        previous step, this call to `step` will start a new sequence and `action`
+        will be ignored.
+
+        Args:
+            action: A NumPy array, or a dict, list or tuple of arrays corresponding to
+                `action_spec()`.
+        
+        Returns:
+            A `TimeStep` namedtuple containing:
+                step_type: A `StepType` value.
+                reward: Reward at this timestep.
+                discount: A discount in the range [0, 1].
+                observation: A NumPy array, or a dict, list or tuple of arrays
+                    corresponding to `observation_spec()`.
+        """
+
+    @abc.abstractmethod
+    def observation_spec(self):
+        """Defines the observations provided by the environment.
+
+        Returns:
+            A tuple of specs(one per agent), where each spec is a dict of shape
+            tuples.
+        """
+        pass
+
+    @abc.abstractmethod
+    def action_spec(self):
+        """Defines the actions that should be provided to `step`.
+
+        Returns:
+            A tuple of specs (one per agent), where each spec is something that
+            defines the shape of the actions.
+        """
+        pass
+
+    @abc.abstractmethod
+    def close(self):
+        """Frees any resources used by the environment.
+
+        Implment this method for an environment backed by an external process.
+
+        This method can be used directly
+        
+        ```python
+        env = Env(...)
+        # Use env
+        env.close()
+        ```
+
+        or via a context manager
+        ```python
+        with Env(...) as env:
+            # Use env.
+        ```
+        """
+        pass
+
+    def __enter__(self):
+        """Allows the environment to be used in a with-statement context."""
+        return self
+    
+    def __exit__(self, unused_exception_type, unused_exc_value, unused_traceback):
+        """Allows the environment to be used in a with-statement context."""
+        self.close()
+    
+    def __del__(self):
+        self.close()
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A League of Legends v4.20 environment."""
+
+from configparser import ConfigParser
+import collections
+from absl import logging
+import random
+import time
+
+import enum
+
+from pylol import maps
+from pylol import run_configs
+from pylol.env import environment
+from pylol.lib import features
+from pylol.lib import common
+from pylol.lib import portspicker
+
+def to_list(arg):
+    return arg if isinstance(arg, list) else [arg]
+
+class Team(enum.IntEnum):
+    BLUE = 0
+    PURPLE = 1
+    NEUTRAL = 2
+
+class Agent(collections.namedtuple("Agent", ["champ", "team"])):
+    """Define an Agent. Each agent has a champion and which team it belongs to"""
+    def __new__(cls, champion, team):
+        return super(Agent, cls).__new__(cls, champion, team)
+
+Dimensions = features.Dimensions
+AgentInterfaceFormat = features.AgentInterfaceFormat
+parse_agent_interface_format = features.parse_agent_interface_format
+
+class LoLEnv(environment.Base):
+    """A League of Legends v4.20 environment.
+
+    The implementation details of the action and observation specs are in
+    lib/features.py
+    """
+    def __init__(self,
+                 host=None,
+                 map_name=None,
+                 players=None,
+                 agent_interface_format=None,
+                 replay_dir=None,
+                 human_observer=False,
+                 cooldowns_enabled=False,
+                 manacosts_enabled=False,
+                 minion_spawns_enabled=False,
+                 config_path="",
+                 multiplier=7.5,
+                 step_multiplier=1):
+        """Create a League of Legends v4.20 Env.
+
+        Args:
+            map_name: Name of a League of Legends v4.20 map. If non are chosen
+                this defaults to `Old Summoners Rift`.
+            players: A list of Agent instances that specify who will play.
+            replay_dir: Directory for the custom replay file to save to.
+        """
+
+        if not host:
+            raise ValueError("You must specify a host.")
+
+        if not players:
+            raise ValueError("You must specify the list of players.")
+            
+        for p in players:
+            if not isinstance(p, (Agent)):
+                raise ValueError(
+                    "Expected players to be of type Agent. Got: %s." % p)
+        
+        if agent_interface_format is None:
+            raise ValueError("Please specify agent_interface_format.")
+        
+        self._agent_interface_format = agent_interface_format
+
+        # num_players = len(players)
+        self._num_agents = sum(1 for p in players if isinstance(p, Agent))
+        self.players = players
+
+        if not map_name:
+            raise ValueError("Missing a map name.")
+        
+        # Extract directories here
+        try:
+            with open(config_path) as f:
+                cfg = ConfigParser()
+                cfg.read_string(f.read())
+                game_server_dir = cfg.get("dirs", "gameserver")
+                client_dir = cfg.get("dirs", "lolclient")
+                #game_server_dir, client_dir = f.read().split("\n")
+                print("GAMESERVER DIR:", game_server_dir)
+                print("CLIENT DIR:", client_dir)
+        except:
+            raise IOError("Could not open config file: '%s'" % config_path)
+
+        self._map_name = map_name
+        self._run_config = run_configs.get(game_server_dir)
+        self._game_info = None
+
+        self._launch_game(host=host,
+                          human_observer=human_observer,
+                          players=players,
+                          map_name=map_name,
+                          cooldowns_enabled=cooldowns_enabled,
+                          manacosts_enabled=manacosts_enabled,
+                          minion_spawns_enabled=minion_spawns_enabled,
+                          game_server_dir=game_server_dir,
+                          client_dir=client_dir,
+                          multiplier=multiplier,
+                          step_multiplier=step_multiplier)
+
+        self._finalize()
+
+    def _finalize(self):
+        self._total_steps = 0
+        self._episode_steps = 0
+        self._episode_count = 0
+
+        self._features = [features.features_from_game_info(
+            agent_interface_format=self._agent_interface_format
+        )]
+
+        self._last_agent_obs = [None] * self._num_agents
+        self._obs = [None] * self._num_agents
+        self._agent_obs = [None] * self._num_agents
+        self._state = environment.StepType.LAST
+        logging.info("Environment is ready.")
+
+    def _launch_game(self, **kwargs):
+        """Actually launch the GameServer."""
+
+        # Reserve some ports
+        self._ports = portspicker.pick_contiguous_unused_ports(2)
+        logging.info("Ports used for GameServer and Redis respectively: %s", self._ports)
+
+        kwargs["host"] = kwargs["host"]
+        kwargs["client_port"] = self._ports[0]
+        kwargs["redis_port"] = self._ports[1]
+
+        self._lol_procs = [self._run_config.start(**kwargs)]
+        self._controllers = [p.controller for p in self._lol_procs]
+    
+    @property
+    def map_name(self):
+        """Get the current map name."""
+        return self._map_name
+    
+    @property
+    def game_info(self):
+        return self._game_info
+    
+    def observation_spec(self):
+        """Look at Features for full spec."""
+        return tuple(f.observation_spec() for f in self._features)
+    
+    def action_spec(self):
+        """Look at Features for full spec."""
+        return tuple(f.action_spec() for f in self._features)
+    
+    def _step(self):
+        return self._observe()
+
+    def step(self, actions):
+        """Apply actions, step the world forward, and return observations.
+
+        Args:
+            actions: A list of actions meeting the action spec, one per agent, or a
+                list per agent. Using a list allows multiple actions per frame, but
+                will still check that they're valid, so disabling
+                ensure_available actions is encouraged.
+        
+        Returns:
+            A tuple of TimeStep namedtuples, one per agent.
+        """
+
+        if self._state == environment.StepType.LAST:
+            return self.reset()
+        
+        """
+        actions = [[f.transform_action(o["observation"], a)
+                    for a in to_list(acts)]
+                   for f, o, acts in zip(self._features, self._obs, actions)]
+        """
+
+        new_actions = []
+        for o, a in zip(self._obs, actions):
+            # print("CURRENT OBS ENV STEP:", o)
+            new_actions.append(self._features[0].transform_action(o["observation"], a))
+
+        for c, a in zip(self._controllers, actions):
+            c.actions(common.RequestAction(actions=new_actions))
+
+        self._state = environment.StepType.MID
+        return self._step()
+    
+    def close(self):
+        logging.info("Environment Close")
+        if hasattr(self, "_controllers") and self._controllers:
+            for c in self._controllers:
+                c.quit()
+            self._controllers = None
+        if hasattr(self, "_lol_procs") and self._lol_procs:
+            for p in self._lol_procs:
+                p.close()
+            self.lol_procs = None
+        if hasattr(self, "_ports") and self._ports:
+            portspicker.return_ports(self._ports)
+        self._game_info = None
+    
+    def _get_observations(self):
+        """
+        def __observe(c, f):
+            obs = c.observe()
+            obs = tuple(environment.TimeStep(
+                step_type=self._state,
+                reward=[0]*self._num_agents,
+                discount=1.0,
+                observation=obs
+            ))
+            # obs = CustomObs(obs)
+            agent_obs = f.transform_obs(obs)
+            return obs, agent_obs
+
+        #print("lol_env.tuple:", __observe(self._controllers, self._features))
+        #self._obs, self._agent_obs = __observe(self._controllers[0], self._features)
+        res = []
+        for c, f in zip(self._controllers, self._features):
+            print("c, f:", c, f)
+            # res.append(tuple(c, f))
+            self._obs, self._agent_obs = __observe(c, f)
+        # print("_get_observations.res:", res)
+        """
+
+        obs = [self._controllers[0].observe() for _ in self.players]
+        #obs = [self._controllers[0].observe()]
+        agent_obs = [self._features[0].transform_obs(o) for o in obs]
+        
+        # Save last observation to calculate rewards
+        self._last_agent_obs = self._agent_obs
+
+        # Set new observations
+        self._obs, self._agent_obs = obs, agent_obs
+
+    def calc_reward(self, last_obs, obs):
+        """Returns the cumulative reward for an observation."""
+
+        reward = 0
+
+        # Winning (+5) Zero-Sum
+        winning_weighting = 5.0
+        if self._state == environment.StepType.LAST: # Last observation for episode
+            if obs["me_unit"].kill_count > obs["enemy_unit"].kill_count:
+                winning_reward = winning_weighting
+            elif obs["me_unit"].kill_count < last_obs["enemy_unit"].kill_count:
+                winning_reward = -winning_weighting
+            else:
+                winning_reward = 0
+            reward += winning_reward
+            print("Winning Reward:",
+              winning_reward,
+              obs["me_unit"].kill_count,
+              obs["enemy_unit"].kill_count)
+
+        # Death (-1)
+        death_weighting = -1
+        death_reward = 0
+        if obs["me_unit"].death_count > last_obs["me_unit"].death_count:
+            death_reward += death_weighting
+        if obs["enemy_unit"].death_count > last_obs["enemy_unit"].death_count:
+            death_reward += -death_weighting
+        if obs["me_unit"].death_count == last_obs["me_unit"].death_count and \
+                obs["enemy_unit"].death_count == last_obs["enemy_unit"].death_count:
+            death_reward = 0
+        reward += death_reward
+        # print("Death Reward:", death_reward)
+
+        # XP Gained (+0.002) Zero-Sum
+        xp_weighting = 0.002
+        me_xp_diff = obs["me_unit"].current_xp - last_obs["me_unit"].current_xp
+        me_xp_reward = me_xp_diff * xp_weighting
+        enemy_xp_diff = obs["enemy_unit"].current_xp - last_obs["enemy_unit"].current_xp
+        enemy_xp_reward = -(enemy_xp_diff * xp_weighting)
+        xp_reward = me_xp_reward + enemy_xp_reward # Zero-Sum
+        reward += xp_reward
+        # print("XP Reward:", xp_reward)
+        
+        # Gold Gained (+0.006) Zero-Sum
+        gold_weighting = 0.006
+        me_gold_diff = obs["me_unit"].current_gold - last_obs["me_unit"].current_gold
+        me_gold_reward = me_gold_diff * gold_weighting
+        enemy_gold_diff = obs["enemy_unit"].current_gold - last_obs["enemy_unit"].current_gold
+        enemy_gold_reward = -(enemy_gold_diff * gold_weighting)
+        gold_reward = me_gold_reward + enemy_gold_reward
+        reward += gold_reward
+        # print("Gold Reward:", gold_reward)
+
+        # Health Changed (+2) Zero-Sum
+        hp_weighting = 2.0
+        def hp_change_to_reward(x): return (x + 1 - (1 - x)**4) / 2
+        me_cur_hp_diff  = obs["me_unit"].current_hp / obs["me_unit"].max_hp
+        me_last_hp_diff = last_obs["me_unit"].current_hp / last_obs["me_unit"].max_hp
+        me_hp_diff = me_cur_hp_diff - me_last_hp_diff
+        me_hp_reward = hp_change_to_reward(me_hp_diff) * hp_weighting
+
+        enemy_cur_hp_diff  = obs["enemy_unit"].current_hp / obs["enemy_unit"].max_hp
+        enemy_last_hp_diff = last_obs["enemy_unit"].current_hp / last_obs["enemy_unit"].max_hp
+        enemy_hp_diff = enemy_cur_hp_diff - enemy_last_hp_diff
+        enemy_hp_reward = -(hp_change_to_reward(enemy_hp_diff) * hp_weighting)
+
+        hp_reward = me_hp_reward + enemy_hp_reward
+        reward += hp_reward
+        # print("HP Reward:", hp_reward)
+
+        # Mana Changed (+0.75)
+        mp_weighting = 0.75
+        me_cur_mp_diff  = obs["me_unit"].current_mp / obs["me_unit"].max_mp
+        me_last_mp_diff = last_obs["me_unit"].current_mp / last_obs["me_unit"].max_mp
+        me_mp_diff = me_cur_mp_diff - me_last_mp_diff
+        me_mp_reward = me_mp_diff * mp_weighting
+
+        enemy_cur_mp_diff  = obs["enemy_unit"].current_mp / obs["enemy_unit"].max_mp
+        enemy_last_mp_diff = last_obs["enemy_unit"].current_mp / last_obs["enemy_unit"].max_mp
+        enemy_mp_diff = enemy_cur_mp_diff - enemy_last_mp_diff
+        enemy_mp_reward = -(enemy_mp_diff * mp_weighting)
+
+        mp_reward = me_mp_reward + enemy_mp_reward
+        reward += mp_reward
+        # print("MP Reward:", mp_reward)
+
+        # Killed Hero (+1, -0.6)
+        kill_weighting = +1
+        kill_reward = 0
+        if obs["me_unit"].kill_count > last_obs["me_unit"].kill_count:
+            kill_diff = obs["me_unit"].kill_count - last_obs["me_unit"].kill_count
+            kill_reward += kill_diff * kill_weighting
+        if obs["enemy_unit"].kill_count > last_obs["enemy_unit"].kill_count:
+            kill_diff = obs["enemy_unit"].kill_count - last_obs["enemy_unit"].kill_count
+            kill_reward += -(kill_diff * kill_weighting)
+        if obs["me_unit"].kill_count == last_obs["me_unit"].kill_count and \
+                obs["enemy_unit"].kill_count == last_obs["enemy_unit"].kill_count:
+            kill_reward = 0
+        reward += kill_reward
+        # print("Kill Reward:", kill_reward)
+
+        # Lane Assignment (-0.15 * seconds out of assigned lane)
+        pass # Empty for now, not primary concern
+        
+        # print("Reward:", reward, end = "\n\n")
+        return reward
+
+    def _observe(self):
+        self._get_observations()
+        
+        # Automatically make this LAST timestep if someone died as that is end of episode
+        # State needs to change before calculating rewards in we start next episode
+        """
+        NOTE: WARNING WARNING WARNING, IF ALL HAS GONE WRONG CHANGE THIS, CHECK HERE
+        NOTE: DEFINITELY MODIFY THIS FOR 1v1, 5v5 AND DIFFERENT TASKS IN THE FUTURE
+        NOTE: THIS WAS DISABLED TO ALLOW THE PPG EXPERIMENT TO RUN BECAUSE A RACE CONDITION
+        NOTE: ... IN THE BELOW CODE WAS CAUSING MULTIPLE RESETS PER WHEN ENV.RESET() WAS
+        NOTE: ... CALLED. NVM THIS IS HAPPENING OUTSIDE OF THE PPG EXPERIMENT AS WELL XD XD XD
+        """
+        if self._controllers[0].someone_died(self._obs[0]["observation"]):
+            # print("SOMEONE DIED LOL:", self._state)
+            if self._state == environment.StepType.MID:
+                self._state = environment.StepType.LAST
+            elif self._state == environment.StepType.FIRST:
+                pass
+            else:
+                self._last_agent_obs = [None] * self._num_agents
+                self._state = environment.StepType.FIRST
+
+        # Calc reward for current observation(s)
+        if self._episode_steps == 0:
+            reward = [0] * self._num_agents
+        else:
+            reward = [self.calc_reward(last, cur) 
+                      for last, cur in zip(self._last_agent_obs, self._agent_obs)]
+        # print("CURRENT REWARD(s):", reward, end = "\n\n\n")
+
+        self._episode_steps += 1
+        self._total_steps += 1
+
+        # print("OBS => SOMEONE_DIED:", self._obs)
+
+        # print("lol_env._observe.self._agent_obs :=", self._agent_obs)
+        ret_val = tuple(environment.TimeStep(
+            step_type=self._state,
+            reward=r,
+            discount=1,
+            observation=o
+        ) for r, o in zip(reward, self._agent_obs))
+
+        return ret_val
+
+    def _restart(self):
+        # Restart the GameServer controllers
+        for c in self._controllers:
+            c.restart()
+
+    def reset(self):
+        """Starts a new episode."""
+        self._episode_steps = 0
+        if self._episode_count:
+            # No need to restart for the first episode
+            self._restart()
+        
+        self._episode_count += 1
+
+        self._controllers[0].players_reset()
+
+        logging.info("Starting episode %s: on %s" % (self._episode_count, self._map_name))
+        self._state = environment.StepType.FIRST
+
+        return self._observe()
+
+    def broadcast_msg(self, msg):
+        for c in self._controllers:
+            c.broadcast_msg(msg)
+
+    def save_replay(self, replay_dir, prefix=None):
+        """Saves a replay to a custom replay file."""
+        if prefix is None:
+            prefix = self._map_name.replace(" ", "_")
+        replay_path = self._run_config.save_replay(
+            self._controllers[0].save_replay(), replay_dir, prefix
+        )
+        logging.info("Wrote replay to: %s", replay_path)
+        return replay_path
+
+MAP = {
+    "Old Summoners Rift": 1,
+    "New Summoners Rift": 11,
+    "Howling Abyss": 12
+}
+
+TEAM = {
+    "BLUE": "BLUE",
+    "PURPLE": "PURPLE"
+}
+
+SUMMONER_SPELL = {
+    "FLASH": "SummonerFlash",
+    "HEAL": "SummonerHeal",
+    "IGNITE": "SummonerDot"
+}
+
+def LoLEnvSettingsPlayer(
+    playerId,
+    name,
+    champion,
+    team,
+    rank="DIAMOND",
+    skin=0,
+    summoner1=SUMMONER_SPELL["FLASH"],
+    summoner2=SUMMONER_SPELL["HEAL"],
+    ribbon=2,
+    icon=0
+):
+    return {
+        "playerId": playerId,
+        "blowfishKey": "17BLOhi6KZsTtldTsizvHg==",
+        "rank": rank,
+        "name": name,
+        "champion": champion,
+        "team": team,
+        "skin": skin,
+        "summoner1": summoner1,
+        "summoner2": summoner2,
+        "ribbon": ribbon,
+        "icon": icon,
+        "runes": {
+            "1": 5245,
+            "2": 5245,
+            "3": 5245,
+            "4": 5245,
+            "5": 5245,
+            "6": 5245,
+            "7": 5245,
+            "8": 5245,
+            "9": 5245,
+            "10": 5317,
+            "11": 5317,
+            "12": 5317,
+            "13": 5317,
+            "14": 5317,
+            "15": 5317,
+            "16": 5317,
+            "17": 5317,
+            "18": 5317,
+            "19": 5289,
+            "20": 5289,
+            "21": 5289,
+            "22": 5289,
+            "23": 5289,
+            "24": 5289,
+            "25": 5289,
+            "26": 5289,
+            "27": 5289,
+            "28": 5335,
+            "29": 5335,
+            "30": 5335
+        }
+    }
+
+def LoLEnvSettingsGameInfo(
+    manacosts_enabled=False,
+    cooldowns_enabled=False,
+    minion_spawns_enabled=False,
+    cheats_enabled=True,
+    is_damage_text_global=True
+):
+    return {
+        "MANACOSTS_ENABLED":        manacosts_enabled,
+        "CHEATS_ENABLED":           cheats_enabled,
+        "COOLDOWNS_ENABLED":        cooldowns_enabled,
+        "MINION_SPAWNS_ENABLED":    minion_spawns_enabled,
+        "CONTENT_PATH": "../../../../Content",
+        "IS_DAMAGE_TEXT_GLOBAL":    is_damage_text_global
+    }
+
+def LoLEnvSettingsGame(
+    map=MAP["Old Summoners Rift"]
+):
+    return {
+        "map": map,
+        "dataPackage": "LeagueSandbox-Scripts"
+    }
+
+def LoLEnvSettings(players, game, gameInfo):
+    return {
+        "players": players,
+        "game": game,
+        "gameInfo": gameInfo
+    }
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A run loop for agent/environment interaction."""
+
+import time
+import os
+import sys
+import subprocess
+
+from pylol import run_configs
+
+def run_loop(agents, env, max_steps=0, max_episodes=0):
+    # Connect
+    controller = env._controllers[0]
+    controller.connect()
+    # controller.players_reset()
+
+    # A run loop for agent/environment interaction
+    total_episodes = 0
+    steps = 0
+    start_time = time.time()
+
+    observation_spec = [env.observation_spec() for _ in agents]
+    action_spec = [env.action_spec() for _ in agents]
+    
+    for agent, obs_spec, act_spec in zip(agents, observation_spec, action_spec):
+        agent.setup(obs_spec, act_spec)
+
+    try:
+        while not max_episodes or total_episodes < max_episodes:
+            total_episodes += 1
+            timesteps = env.reset()
+            controller.player_teleport(1, 6900.0, 6900.0)
+            controller.player_teleport(2, 7100.0, 7100.0)
+            env.broadcast_msg("CURRENTLY RUNNING EPISODE: %s" % total_episodes)
+            # print("TIMESTEPS:", timesteps)
+            for a in agents:
+                a.reset()
+            while True:
+                steps += 1
+                if max_steps and steps > max_steps: # +1 for initial reset action
+                    return
+                print("STEP:", steps)
+                actions = [agent.step(timestep)
+                           for agent, timestep in zip(agents, timesteps)]
+                # print("ALL ACTIONS DURING STEP:", actions, agents, list(zip(agents, timesteps)))
+                #
+                if timesteps[0].last():
+                    break
+                #
+                # print("STEP TIMESTEPS:", steps)
+                timesteps = env.step(actions)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        elapsed_time = time.time() - start_time
+        print("Took %.3f seconds for %s steps: %.3f fps" % (
+            elapsed_time, steps-1, (steps-1) / elapsed_time))
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Define the static list of types and actions for League of Legends v4.20."""
+
+import collections
+import numbers
+
+import enum
+import numpy
+from pylol.lib import point
+import six
+
+def no_op(action, **kwargs):
+    action.fill("no_op", **kwargs)
+
+def move(action, **kwargs):
+    action.fill("move", **kwargs)
+
+def spell(action, **kwargs):
+    action.fill("spell", **kwargs)
+
+def numpy_to_python(val):
+    """Convert numpy types to their corresponding python types."""
+    if isinstance(val, (int, float)):
+        return val
+    if isinstance(val, six.string_types):
+        return val
+    if (isinstance(val, numpy.number) or
+        isinstance(val, numpy.ndarray) and not val.shape):  # numpy.array(1)
+        return val.item()
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        return [numpy_to_python(v) for v in val]
+    raise ValueError("Unknown value. Type: %s, repr: %s" % (type(val), repr(val)))
+
+SPELL_FUNCTIONS = {}
+
+always = lambda _: True
+
+class ArgumentType(collections.namedtuple(
+    "ArgumentType", ["id", "name", "sizes", "fn", "values"])):
+    """Represents a single argument type.
+
+    Attributes:
+        id: The argument id. This is unique.
+        name: The name of the argument, also unique.
+        sizes: The max+1 of each of the dimensions this argument takes.
+        fn: ...
+        values: An enum representing the values this argument type could hold. None
+            if this isn't an enum argument type.
+    """
+    __slots__ = ()
+
+    def __str__(self):
+        return "%s/%s %s" % (self.id, self.name, list(self.sizes))
+
+    def __reduce__(self):
+        return self.__class__, tuple(self)
+        
+    @classmethod
+    def enum(cls, options, values):
+        """Create an ArgumentType where you choose one of a set of known values."""
+        names, real = zip(*options)
+        del names  # unused
+
+        def factory(i, name):
+            return cls(i, name, (len(real),), lambda a: real[a[0]], values)
+        return factory
+
+    @classmethod
+    def scalar(cls, value):
+        """Create an ArgumentType with a single scalar in range(value)."""
+        return lambda i, name: cls(i, name, (value,), lambda a: a[0], None)
+
+    @classmethod
+    def point(cls):  # No range because it's unknown at this time.
+        """Create an ArgumentType that is represented by a point.Point."""
+        def factory(i, name):
+            return cls(i, name, (0, 0), lambda a: point.Point(*a).floor(), None)
+        return factory
+
+    @classmethod
+    def spec(cls, id_, name, sizes):
+        """Create an ArgumentType to be used in ValidActions."""
+        return cls(id_, name, sizes, None, None)
+        
+class Arguments(collections.namedtuple("Arguments",
+                ["move_range", "position", "spell"])):
+    """The full list of argument types.
+
+    Attributes:
+        move_range: Relative units away from current position in 100s of units.
+        position: A point on the map.
+        spell: A champion ability or summoner spell cast by a champion.
+    """
+    __slots__ = ()
+
+    @classmethod
+    def types(cls, **kwargs):
+        #Create an Arguments of the possible Types.#
+        named = {name: factory(Arguments._fields.index(name), name)
+                 for name, factory in six.iteritems(kwargs)}
+        return cls(**named)
+    
+    def __reduce__(self):
+        return self.__class__, tuple(self)
+
+SPELL_OPTIONS = (
+    ("Q", 0),
+    ("W", 1),
+    ("E", 2),
+    ("R", 3),
+    ("Sum1", 4),
+    ("Sum2", 5)
+)
+Spell = ("Spell", SPELL_OPTIONS)
+
+# List of types.
+TYPES = Arguments.types(
+    position=ArgumentType.point(),
+    move_range=ArgumentType.point(),
+    spell=ArgumentType.enum(SPELL_OPTIONS, Spell)
+)
+
+# Argument types for different functions.
+FUNCTION_TYPES = {
+    no_op: [],
+    move: [TYPES.move_range],
+    spell: [TYPES.spell, TYPES.position]
+}
+
+POINT_REQUIRED_FUNCS = {
+    False: {},
+    True: {move, spell}}
+
+class Function(collections.namedtuple(
+    "Function", ["id", "name", "function_type", "args", "avail_fn"])):
+    """Represents a function action.
+    
+    Attributes:
+        id: The function id, which is what the agent will use.
+        name: The name of the function. Should be unique.
+        function_type: One of the functions in FUNCTION_TYPES for how to construct
+            the lol action out of python types.
+        args: A list of the types of args passed to function_type.
+        avail_fn: Returns whether the function is available.
+    """
+    __slots__ = ()
+
+    @classmethod
+    def no_op(cls, id_, name, function_type, avail_fn=always):
+        return cls(id_, name, function_type, FUNCTION_TYPES[function_type], avail_fn)
+    
+    @classmethod
+    def move(cls, id_, name, function_type, avail_fn=always):
+        return cls(id_, name, function_type, FUNCTION_TYPES[function_type], avail_fn)
+
+    @classmethod
+    def spell(cls, id_, name, function_type, avail_fn=always):
+        return cls(id_, name, function_type, FUNCTION_TYPES[function_type], avail_fn)
+
+    """
+    @classmethod
+    def spell_ability(cls, id_, name, function_type, args, avail_fn):
+        assert function_type in SPELL_FUNCTIONS
+        return cls(id_, name, function_type, args, avail_fn)
+    """
+
+    @classmethod
+    def spec(cls, id_, name, args):
+        """Create a Function to be used in ValidActions."""
+        return cls(id_, name, None, args, None)
+
+    def __hash__(self):
+        return self.id
+
+    def __str__(self):
+        return self.str()
+
+    def __reduce__(self):
+        return self.__class__, tuple(self)
+    
+    def __call__(self, *args):
+        """A convenient way to create a FunctionCall from this Function."""
+        print("This is being called")
+        return FunctionCall.init_with_validation(self.id, args)
+
+    def str(self, space=False):
+        """String version. Set space=True to line them all up nicely."""
+        return "%s/%s (%s)" % (str(int(self.id)).rjust(space and 4),
+                            self.name.ljust(space and 50),
+                            "; ".join(str(a) for a in self.args))
+
+class Functions(object):
+    """Represents the full set of functions.
+
+    Can't use namedtuple since python3 has a limit of 255 function arguments, so
+    build something similar.
+    """
+
+    def __init__(self, functions):
+        functions = sorted(functions, key=lambda f: f.id)
+        self._func_list = functions
+        self._func_dict = {f.name: f for f in functions}
+        if len(self._func_dict) != len(self._func_list):
+            raise ValueError("Function names must be unique.")
+    
+    
+    def __getattr__(self, name):
+        return self._func_dict[name]
+
+    def __getitem__(self, key):
+        if isinstance(key, numbers.Integral):
+            return self._func_list[key]
+        return self._func_dict[key]
+
+    def __getstate__(self):
+        return self._func_list
+
+    def __setstate__(self, functions):
+        self.__init__(functions)
+
+    def __iter__(self):
+        return iter(self._func_list)
+
+    def __len__(self):
+        return len(self._func_list)
+
+    def __eq__(self, other):
+        return self._func_list == other._func_list
+
+_FUNCTIONS = [
+    Function.no_op(0, "no_op", no_op),
+    Function.move(1, "move", move),
+    Function.spell(2, "spell", spell)
+]
+
+# Create IntEnum of function names/ids so printing the id will show something useful.
+# print("_FUNCTIONS := ", _FUNCTIONS)
+_Functions = enum.IntEnum("_Functions", {f.name: f.id for f in _FUNCTIONS})
+_FUNCTIONS = [f._replace(id=_Functions(f.id)) for f in _FUNCTIONS]
+FUNCTIONS = Functions(_FUNCTIONS)
+
+# Some indexes to support features.py and action conversion.
+FUNCTIONS_AVAILABLE = {f.id: f for f in FUNCTIONS if f.avail_fn}
+
+class FunctionCall(collections.namedtuple(
+    "FunctionCall", ["function", "arguments"])):
+    """Represents a function call action.
+
+    Attributes:
+        function: Store the function id.
+        arguments: The list of arguments for that function, each being a list of
+            ints.
+    """
+    __slots__ = ()
+
+    @classmethod
+    def init_with_validation(cls, function, arguments, raw=False):
+        """Return a `FunctionCall` given some validation for the function and args.
+
+        Args:
+            function: A function name or id, to be converted into a function id enum.
+            arguments: An iterable of function arguments. Arguments that are enum
+                types can be passed by name. Arguments that only take on value (ie
+                not a point) don't need to be wrapped in a list.
+            raw: Whether this is a raw function call.
+
+        Returns:
+            A new `FunctionCall` instance.
+        
+        Raises:
+            KeyError: if the enum doesn't exist.
+            ValueError: if the enum id doesn't exist.
+        """
+        func = FUNCTIONS[function]
+        args = []
+        for arg, arg_type in zip(arguments, func.args):
+            arg = numpy_to_python(arg)
+            if arg_type.values: # Allow enum values by name or int.
+                if isinstance(arg, six.string_types):
+                    try:
+                        args.append([arg_type.values[arg]])
+                    except KeyError:
+                        raise KeyError("Unknown argument value: %s, valid values: %s" % (
+                            arg, [v.name for v in arg_type.values]))
+                else:
+                    if isinstance(arg, list):
+                        arg = arg[0]
+                    try:
+                        args.append([arg_type.values[arg]])
+                    except ValueError:
+                        raise ValueError("Unknown argument value: %s, valid values: %s" % (
+                arg, list(arg_type.values)))
+            elif isinstance(arg, int): # Allow bare ints
+                args.append([arg])
+            elif isinstance(arg, list):
+                args.append(arg)
+            else:
+                raise ValueError(
+                    "Unknown argument value type: %s, expected int or list of ints, or "
+                    "their numpy equivalents. Value: %s" % (type(arg), arg))
+        print("FunctionCall: ", func.id, args)
+        return cls(func.id, args)
+
+    @classmethod
+    def all_arguments(cls, function, arguments, raw=False):
+        """Helper function for creating `FunctionCall`s with `Arguments`.
+
+        Args:
+        function: The value to store for the action function.
+        arguments: The values to store for the arguments of the action. Can either
+            be an `Arguments` object, a `dict`, or an iterable. If a `dict` or an
+            iterable is provided, the values will be unpacked into an `Arguments`
+            object.
+        raw: Whether this is a raw function call.
+
+        Returns:
+        A new `FunctionCall` instance.
+        """
+        args_type = Arguments
+
+        if isinstance(arguments, dict):
+            arguments = args_type(**arguments)
+        elif not isinstance(arguments, args_type):
+            arguments = args_type(*arguments)
+        return cls(function, arguments)
+        
+    def __reduce__(self):
+        return self.__class__, tuple(self)
+
+class ValidActions(collections.namedtuple(
+    "ValidActions", ["types", "functions"])):
+    """The set of types and functions that are valid for an agent to use.
+
+    Attributes:
+        types: A namedtuple of the types that the functions require. Unlike TYPES
+            above, this include the sizes for screen.
+        functions: A namedtuple of all the functions.
+    """
+    __slots__ = ()
+
+    def __reduce__(self):
+        return self.__class__, tuple(self)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Equivalent to protobuff for this project."""
+
+class Action(object):
+    """Creates an action template to be converted to a RequestAction."""
+
+    def __init__(self):
+        self.props = {}
+    
+    def fill(self, type, **kwargs):
+        self.props["type"] = type
+        for key, value in kwargs.items():
+            self.props[key] = value
+    
+    def get(self):
+        return self.props
+        
+    def __str__(self):
+        return str(self.props)
+
+class RequestAction(object):
+    def __init__(self, actions):
+        self.actions = actions
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Features used for ML"""
+
+import collections
+from absl import logging
+import random
+import six
+
+import enum
+import numpy as np
+from pylol.lib import actions
+from pylol.lib import named_array
+from pylol.lib import point
+from pylol.lib import common
+
+class ChampUnit(enum.IntEnum):
+    """Indices into the `ChampUnit` observation."""
+    user_id		            = 0
+    position_x		        = 1
+    position_y              = 2
+    facing_angle		    = 3
+    max_hp		            = 4
+    current_hp		        = 5
+    hp_regen		        = 6
+    max_mp		            = 7
+    current_mp		        = 8
+    mp_regen		        = 9
+    attack_damage		    = 10
+    attack_speed		    = 11
+    alive		            = 12
+    level		            = 13
+    armor		            = 14
+    mr		                = 15
+    current_gold		    = 16
+    current_xp              = 17
+    death_count		        = 18
+    kill_count              = 19
+    move_speed		        = 20
+    my_team		            = 21
+    neutal		            = 22
+    dx_to_me		        = 23
+    dy_to_me		        = 24
+    distance_to_me		    = 25
+    q_cooldown		        = 26
+    q_level		            = 27
+    w_cooldown	    	    = 28
+    w_level		            = 29
+    e_cooldown	    	    = 30
+    e_level		            = 31
+    r_cooldown	    	    = 32
+    r_level		            = 33
+    sum_1_cooldown		    = 34
+    sum_2_cooldown		    = 35
+
+class AgentInterfaceFormat(object):
+    """Observation and action interface format specific to a particular agent."""
+    
+    def __init__(self, feature_dimensions=None):
+        """Initializer.
+
+        Args:
+            feature_dimensions: Feature layer `Dimension`.
+        """
+        if not feature_dimensions:
+            raise ValueError("Must set feature dimensions")
+            
+        self._feature_dimensions = feature_dimensions
+        self._action_dimensions = feature_dimensions
+
+    @property
+    def feature_dimensions(self):
+        return self._feature_dimensions
+    
+    @property
+    def action_dimensions(self):
+        return self._action_dimensions
+
+def parse_agent_interface_format(feature_map=None, feature_move_range=None):
+    """Creates an AgentInterfaceFormat object from keyword args.
+
+    Convenient when using dictionaries or command-line arguments for config.
+
+    Note that the feature_* and rgb_* properties define the respective spatial
+    observation dimensions and accept:
+        * None or 0 to disable that spatial observation.
+        * A single int for a square observation with that side length.
+        * A (int, int) tuple for a rectangular (width, height) observation.
+
+    Args:
+        feature_map: Map dimensions.
+        feature_move_range: Range of movement (divided by 100) the agent can move.
+    
+    Returns:
+        An `AgentInterfaceFormat` object.
+    
+    Raises:
+    ValueError: If an invalid parameter is specified.
+    """
+    if feature_map and feature_move_range:
+        feature_dimensions = Dimensions(feature_map,
+            feature_move_range)
+    
+    return AgentInterfaceFormat(feature_dimensions=feature_dimensions)
+
+def _to_point(dims):
+  """Convert (width, height) or size -> point.Point."""
+  assert dims
+
+  if isinstance(dims, (tuple, list)):
+    if len(dims) != 2:
+      raise ValueError(
+          "A two element tuple or list is expected here, got {}.".format(dims))
+    else:
+      width = int(dims[0])
+      height = int(dims[1])
+      if width <= 0 or height <= 0:
+        raise ValueError("Must specify +ve dims, got {}.".format(dims))
+      else:
+        return point.Point(width, height)
+  else:
+    size = int(dims)
+    if size <= 0:
+      raise ValueError(
+          "Must specify a +ve value for size, got {}.".format(dims))
+    else:
+      return point.Point(size, size)
+
+class Dimensions(object):
+    """Map dimensions configuration.
+
+    Map dimensions must be specified. Sizes must be positive.
+
+    Attributes:
+        map: A (width, height) int tuple or a single int to be used.
+        move_range: A (width, height) int tuple or a single int to be used.
+    """
+
+    def __init__(self, map=None, move_range=None):
+        if not map:
+            raise ValueError("map must be set, map={}".format(map))
+            
+        if not move_range:
+            raise ValueError("move_range must be set, move_range={}".format(move_range))
+    
+        self._map = _to_point(map)
+        self._move_range = _to_point(move_range)
+
+    @property
+    def map(self):
+        return self._map
+    
+    @property
+    def move_range(self):
+        return self._move_range
+    
+    def __repr__(self):
+        return "Dimensions(map={}, move_range={})".format(self._map, self._move_range)
+
+    def __eq__(self, other):
+        return (isinstance(other, Dimensions) and self._map == other._map and
+                self._move_range == other._move_range)
+
+    def __ne__(self, other):
+        return not self == other
+
+class Features(object):
+    """Render feature layers from GameServer observation into numpy arrays."""
+
+    def __init__(self, agent_interface_format=None):
+        """Initialize a Features instance matching the specified interface format.
+
+        Args:
+            agent_interface_format: See the documentation for `AgentInterfaceFormat`.
+        """
+        if not agent_interface_format:
+            raise ValueError("Please specify agent_interface_format")
+        
+        self._agent_interface_format = agent_interface_format
+        aif = self._agent_interface_format
+
+        self._valid_functions = _init_valid_functions(aif.action_dimensions)
+    
+    def observation_spec(self):
+        """The observation spec for the League of Legends v4.20 environment.
+        
+        Returns:
+            The dict of observation names 
+        """
+
+        aif = self._agent_interface_format
+
+        obs_spec = named_array.NamedDict({
+            "my_id": (0,),
+            "game_time": (0,),
+            "me_unit": (len(ChampUnit),),
+            "enemy_unit": (len(ChampUnit),)
+        })
+        
+        """
+        if aif.feature_dimensions:
+            obs_spec["feature_map"] = (len(MAP_FEATURES),
+                                       aif.feature_dimensions.map.x,
+                                       aif.feature_dimensions.map.y)
+            obs_spec["feature_move_range"] = (len(MOVE_RANGE_FEATURES),
+                                       aif.feature_dimensions.move_range.x,
+                                       aif.feature_dimensions.move_range.y)
+        """
+
+        obs_spec["available_actions"] = (0,)
+
+        return obs_spec
+
+    def action_spec(self):
+        """The action space pretty complicated and fills the ValidFunctions."""
+        return self._valid_functions
+
+    def available_actions(self, obs):
+        """Return the list of available action ids."""
+        available_actions = set()
+        obs_available_actions = obs["available_actions"]
+        # print("AVAILABLE ACTIONS:", obs_available_actions)
+        if obs_available_actions["can_no_op"]: available_actions.add(0)
+        if obs_available_actions["can_move"]: available_actions.add(1)
+        if  obs_available_actions["can_spell_0"] or \
+            obs_available_actions["can_spell_1"] or \
+            obs_available_actions["can_spell_2"] or \
+            obs_available_actions["can_spell_3"] or \
+            obs_available_actions["can_spell_4"] or \
+            obs_available_actions["can_spell_5"]:
+            available_actions.add(2)
+        """
+        print("FUNCTIONS AVAILABLE:", actions.FUNCTIONS_AVAILABLE)
+        for i, func in six.iteritems(actions.FUNCTIONS_AVAILABLE):
+            if func.avail_fn(obs):
+                available_actions.add(i)
+        """
+        
+        return list(available_actions)
+
+    def transform_action(self, obs, func_call):
+        """Transform an agent-style action to one that GameServer can consume.
+
+        Args:
+            obs: an observation extracted from redis from the previous step.
+            func_call: a `FunctionCall` to be turned into a a redis action.
+        
+        Returns:
+            a corresponding `common.Action`.
+        
+        Raises:
+            ValueError: if the action doesn't pass validation.
+        """
+        """
+        if isinstance(func_call, common.Action):
+            return func_call
+        """
+
+        # Valid id?
+        func_id = func_call.function
+        try:
+            func = actions.FUNCTIONS[func_id]
+        except KeyError:
+            raise ValueError("Invalid function: %s." % func_id)
+            
+        # Correct number of args?
+        if len(func_call.arguments) != len(func.args):
+            raise ValueError(
+                "Wrong number of arguments for function: %s, got: %s" % (
+                    func, func_call.arguments))
+        
+        # Args are valid?
+        aif = self._agent_interface_format
+        # print("FUNC:", func.args, func_call.arguments)
+        for t, arg in zip(func.args, func_call.arguments):
+            if t.name in ("position"):
+                sizes = aif.action_dimensions.map
+            elif t.name in ("move_range"):
+                sizes = aif.action_dimensions.move_range
+            else:
+                sizes = t.sizes
+            if len(sizes) != len(arg):
+                raise ValueError(
+                    "Wrong number of values for argument of %s, got: %s" % (
+                        func, func_call.arguments))
+            for s, a in zip(sizes, arg):
+                if not np.all(0 <= a) and np.all(a < s):
+                    raise ValueError("Argument is out of range for %s, got: %s" % (
+                        func, func_call.arguments))
+
+        # Convert them to python types
+        kwargs = {type_.name: type_.fn(a)
+              for type_, a in zip(func.args, func_call.arguments)}
+        
+        # Get the issuers user_id from the observation
+        for champ_unit in obs["champ_units"]:
+            if champ_unit["distance_to_me"] == 0.0:
+                kwargs["user_id"] = champ_unit["user_id"]
+
+        # redis magic...
+        lol_action = common.Action()
+
+        kwargs["action"] = lol_action
+        actions.FUNCTIONS[func_id].function_type(**kwargs)
+
+        return lol_action
+
+    def transform_obs(self, obs):
+        """Render some GameServer observations into something an agent can handle."""
+        # Get agents user id
+        me_id = None
+        enemy_id = None
+        me_unit = None
+        enemy_unit = None
+        for champ_unit in obs["observation"]["champ_units"]:
+            if champ_unit["distance_to_me"] == 0.0:
+                me_id = champ_unit["user_id"]
+                me_unit = champ_unit
+            else:
+                enemy_id = champ_unit["user_id"]
+                enemy_unit = champ_unit
+
+        # Observations of champion units in the game
+        champ_units = [named_array.NamedNumpyArray([
+            champ_unit["user_id"],
+            champ_unit["position"]["X"],
+            champ_unit["position"]["Y"],
+            champ_unit["facing_angle"],
+            champ_unit["max_hp"],
+            champ_unit["current_hp"],
+            champ_unit["hp_regen"],
+            champ_unit["max_mp"],
+            champ_unit["current_mp"],
+            champ_unit["mp_regen"],
+            champ_unit["attack_damage"],
+            champ_unit["attack_speed"]	,
+            champ_unit["alive"],
+            champ_unit["level"],
+            champ_unit["armor"],
+            champ_unit["mr"],
+            champ_unit["current_gold"],
+            champ_unit["current_xp"],
+            champ_unit["death_count"],
+            champ_unit["kill_count"],
+            champ_unit["move_speed"],
+            champ_unit["my_team"],
+            champ_unit["neutal"],
+            champ_unit["dx_to_me"],
+            champ_unit["dy_to_me"],
+            champ_unit["distance_to_me"],
+            champ_unit["q_cooldown"],
+            champ_unit["q_level"],
+            champ_unit["w_cooldown"],
+            champ_unit["w_level"],
+            champ_unit["e_cooldown"],
+            champ_unit["e_level"],
+            champ_unit["r_cooldown"],
+            champ_unit["r_level"],
+            champ_unit["sum_1_cooldown"],
+            champ_unit["sum_2_cooldown"],
+        ], names=ChampUnit, dtype=np.float32) for champ_unit in obs["observation"]["champ_units"]]
+
+        # Observation output
+        out = named_array.NamedDict({
+            "my_id": float(me_id),
+            "game_time": float(obs["observation"]["game_time"]),
+            "me_unit": champ_units[0 if me_id == 1 else 1],
+            "enemy_unit": champ_units[0 if enemy_id == 1 else 1]
+        })
+
+        # Print original observation
+        # print("transform_obs().obs:", obs)
+
+        # Set available actions
+        out["available_actions"] = np.array(
+          self.available_actions(obs["observation"]), dtype=np.int32)
+        
+        return out
+
+def _init_valid_functions(action_dimensions):
+    """Initialize ValidFunctions and set up the callbacks."""
+    sizes = {
+        "position": tuple(int(i) for i in action_dimensions.map),
+        "move_range": tuple(int(i) for i in action_dimensions.move_range)
+    }
+
+    types = actions.Arguments(*[
+        actions.ArgumentType.spec(t.id, t.name, sizes.get(t.name, t.sizes))
+        for t in actions.TYPES])
+
+    functions = actions.Functions([
+        actions.Function.spec(f.id, f.name, tuple(types[t.id] for t in f.args))
+        for f in actions.FUNCTIONS])
+    
+    return actions.ValidActions(types, functions)
+    
+def features_from_game_info(agent_interface_format=None):
+    """Construct a Features object using data extracted from game info.
+
+    Returns:
+        A features object.
+    """
+
+    return Features(agent_interface_format=agent_interface_format)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Launch the game and set up communication."""
+
+from absl import logging
+import subprocess
+import time
+import os
+
+from absl import flags
+
+from pylol.lib import remote_controller
+from pylol.lib import utils
+
+class LoLLaunchError(Exception):
+    pass
+
+class LoLProcess(object):
+    """Launch a modified LeagueSandbox server, initialize a controller, and
+    later, clean up.
+    
+    This is best used from run_configs, which decides which version to run,
+    and where to find it.
+    """
+
+    def __init__(self, run_config, exec_path, timeout_seconds=20, full_screen=False,
+                 host=None, port=None, window_size=(640, 480), **kwargs):
+        """Launch the League of Legends process.
+
+        Args:
+            run_config: `run_configs.lib.RunConfig` object.
+            exec_path: Path to the binary to run.
+            full_screen: Whether to launch the game window full_screen.
+            host: IP for the game to listen on for clients.
+            port: Port GameServer should listen on for clients.
+            timeout_seconds: Timeout for the GameServer to start before we give up.
+            window_size: Screen size if not full screen.
+        """
+
+        self._proc = None
+        self.controller = None
+        self.check_exists(exec_path)
+        self.host = host or "192.168.0.16"
+        self.port = port or "5119"
+        self._run_config = run_config
+
+        print("kwargs process:", kwargs)
+
+        human_count = 1 if kwargs["human_observer"] else 0
+        agent_count = len(kwargs["players"]) - human_count
+        multiplier = 7.5 if "multiplier" not in kwargs else kwargs["multiplier"]
+        step_multiplier = 1 if "step_multiplier" not in kwargs else kwargs["step_multiplier"]
+        replay_path = "" if "replay_path" not in kwargs else kwargs["replay_path"]
+        args = [
+            exec_path,
+            "--host", self.host,
+            "--port", str(kwargs["client_port"]),
+            "--redis_port", str(kwargs["redis_port"]),
+            "--human_count", str(human_count),
+            "--agent_count", str(agent_count),
+            "--multiplier", str(multiplier),
+            "--step_multiplier", str(step_multiplier),
+            "--replay_path", str(replay_path)
+        ]
+
+        kwargs["multiplier"] = multiplier
+        
+        try:
+            self.controller = remote_controller.RemoteController(
+                None, self.host, None, timeout_seconds=timeout_seconds, proc=self, kwargs=kwargs)
+            self._proc = self.launch(run_config, args, **kwargs)
+        except:
+            self.close()
+            raise
+
+    def launch(self, run_config, args, **kwargs):
+        """Launch the process and return the process object."""
+        try:
+            # Write the config
+            config_path = self._run_config.exec_dir + "./Settings/"
+            utils.write_config(config_path=config_path,
+                               players=kwargs["players"],
+                               map_name=kwargs["map_name"],
+                               cooldowns_enabled=kwargs["cooldowns_enabled"],
+                               manacosts_enabled=kwargs["manacosts_enabled"],
+                               minion_spawns_enabled=kwargs["minion_spawns_enabled"])
+
+            # Run the GameServer
+            return subprocess.Popen(args, cwd=run_config.cwd, env=run_config.env)
+        except OSError:
+            logging.execution("Failed to launch")
+            raise LoLLaunchError("Failed to launch: %s" % args)
+    
+    def __enter__(self):
+        return self.controller
+
+    def __exit__(self, unused_exception_type, unused_exc_value, unused_traceback):
+        self.close()
+
+    def close(self):
+        """Shut down the game and clean up."""
+        if hasattr(self, "controller") and self.controller:
+            self.controller.close()
+            self.controller = None
+        self.shutdown()
+    
+    def shutdown(self):
+        """Terminate the GameServer subprocess."""
+        if self._proc:
+            ret = shutdown_proc(self._proc, 3)
+            logging.info("Shutdown with return code: %s", ret)
+            self._proc = None
+    
+    def check_exists(self, exec_path):
+        if not os.path.isfile(exec_path):
+            raise RuntimeError("Trying to run: '%s', but it doesn't exist " % exec_path)
+        if not os.access(exec_path, os.X_OK):
+            raise RuntimeError("Trying to run: '%s', but it isn't executable" % exec_path)
+
+def shutdown_proc(p, timeout):
+    """Wait for a proc to shut down, then terminate or kill it after `timeout`."""
+    freq = 10 # How often to check per second
+    for _ in range(1 + timeout * freq):
+        p.terminate()
+        ret = p.poll()
+        if ret is not None:
+            logging.info("Shutdown gracefully.")
+            return ret
+        time.sleep(1 / freq)
+    logging.warning("Killing the process.")
+    p.kill()
+    return p.wait()
+
+# Copyright 2018 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Named numpy arrays for easier access to the observation data.
+
+https://docs.scipy.org/doc/numpy/user/basics.rec.html are not enough since they
+actually change the type and don't interoperate well with tensorflow.
+"""
+
+import numbers
+import re
+
+import enum
+import numpy as np
+import six
+
+
+class NamedDict(dict):
+  """A dict where you can use `d["element"]` or `d.element`."""
+
+  def __init__(self, *args, **kwargs):
+    super(NamedDict, self).__init__(*args, **kwargs)
+    self.__dict__ = self
+
+
+_NULL_SLICE = slice(None, None, None)
+
+
+# pylint: disable=protected-access
+class NamedNumpyArray(np.ndarray):
+  """A subclass of ndarray that lets you give names to indices.
+
+  This is a normal ndarray in the sense that you can always index by numbers and
+  slices, though elipses don't work. Also, all elements have the same type,
+  unlike a record array.
+
+  Names should be a list of names per dimension in the ndarray shape. The names
+  should be a list or tuple of strings, a namedtuple class (with names taken
+  from _fields), or an IntEnum. Alternatively if you don't want to give a name
+  to a particular dimension, use None. If your array only has one dimension, the
+  second level of list can be skipped.
+
+  Example usage:
+    a = named_array.NamedNumpyArray([1, 3, 6], ["a", "b", "c"])
+    a.a, a[1], a["c"] => 1, 3, 6
+    b = named_array.NamedNumpyArray([[1, 3], [6, 8]], [["a", "b"], None])
+    b.a, b[1], b["a", 1] => [1, 3], [6, 8], 3
+    c = named_array.NamedNumpyArray([[1, 3], [6, 8]], [None, ["a", "b"]])
+    c[0].a, b[1, 0], b[1, "b"] => 1, 6, 8
+  Look at the tests for more examples including using enums and named tuples.
+  """
+  # Details of how to subclass an ndarray are at:
+  # https://docs.scipy.org/doc/numpy-1.13.0/user/basics.subclassing.html
+
+  def __new__(cls, values, names, *args, **kwargs):
+    obj = np.array(values, *args, **kwargs)
+
+    if len(obj.shape) == 0:  # pylint: disable=g-explicit-length-test
+      raise ValueError("Scalar arrays are unsupported.")
+
+    if len(obj.shape) == 1:
+      if obj.shape[0] == 0 and names and names[0] is None:
+        # Support arrays of length 0.
+        names = [None]
+      else:
+        # Allow just a single dimension if the array is also single dimension.
+        try:
+          if len(names) > 1:
+            names = [names]
+        except TypeError:  # len of a namedtuple is a TypeError
+          names = [names]
+
+    # Validate names!
+    if not isinstance(names, (list, tuple)) or len(names) != len(obj.shape):
+      raise ValueError(
+          "Names must be a list of length equal to the array shape: %s != %s." %
+          (len(names), len(obj.shape)))
+    index_names = []
+    only_none = obj.shape[0] > 0
+    for i, o in enumerate(names):
+      if o is None:
+        index_names.append(o)
+      else:
+        only_none = False
+        if isinstance(o, enum.EnumMeta):
+          for j, n in enumerate(o._member_names_):
+            if j != o[n]:
+              raise ValueError("Enum has holes or doesn't start from 0.")
+          o = o._member_names_
+        elif isinstance(o, type):  # Assume namedtuple
+          try:
+            o = o._fields
+          except AttributeError:
+            raise ValueError("Bad names. Must be None, a list of strings, "
+                             "a namedtuple, or IntEnum.")
+        elif isinstance(o, (list, tuple)):
+          for n in o:
+            if not isinstance(n, six.string_types):
+              raise ValueError(
+                  "Bad name, must be a list of strings, not %s" % type(n))
+        else:
+          raise ValueError("Bad names. Must be None, a list of strings, "
+                           "a namedtuple, or IntEnum.")
+        if obj.shape[i] != len(o):
+          raise ValueError(
+              "Wrong number of names in dimension %s. Got %s, expected %s." % (
+                  i, len(o), obj.shape[i]))
+        index_names.append({n: j for j, n in enumerate(o)})
+    if only_none:
+      raise ValueError("No names given. Use a normal numpy.ndarray instead.")
+
+    # Finally convert to a NamedNumpyArray.
+    obj = obj.view(cls)
+    obj._index_names = index_names  # [{name: index}, ...], dict per dimension.
+    return obj
+
+  def __array_finalize__(self, obj):
+    if obj is None:
+      return
+    self._index_names = getattr(obj, "_index_names", None)
+
+  def __getattr__(self, name):
+    try:
+      return self[name]
+    except KeyError:
+      raise AttributeError("Bad attribute name: %s" % name)
+
+  def __setattr__(self, name, value):
+    if name == "_index_names":  # Need special handling to avoid recursion.
+      super(NamedNumpyArray, self).__setattr__(name, value)
+    else:
+      self.__setitem__(name, value)
+
+  def __getitem__(self, indices):
+    """Get by indexing lookup."""
+    indices = self._indices(indices)
+    obj = super(NamedNumpyArray, self).__getitem__(indices)
+
+    if (isinstance(indices, np.ndarray) and len(indices.shape) > 1 and
+        indices.dtype == bool):
+      # Is this a multi-dimensional mask, eg: obj[obj == 5] ?
+      # Multi-dimensional masks return a single dimensional array, and it's
+      # unclear what it means for the result to have names, so return a normal
+      # numpy array.
+      return np.array(obj)
+
+    if isinstance(obj, np.ndarray):  # If this is a view, index the names too.
+      if not isinstance(indices, tuple):
+        indices = (indices,)
+      new_names = []
+      dim = 0
+      for i, index in enumerate(indices):
+        if isinstance(index, numbers.Integral):
+          dim += 1  # Drop this dimension's names.
+        elif index is Ellipsis:
+          # Copy all the dimensions' names through.
+          end = len(self.shape) - len(indices) + i + 1
+          for j in range(dim, end):
+            new_names.append(self._index_names[j])
+          dim = end
+        elif index is np.newaxis:  # Add an unnamed dimension.
+          new_names.append(None)
+          # Don't modify dim, as we're still working on the same one.
+        elif (self._index_names[dim] is None or
+              (isinstance(index, slice) and index == _NULL_SLICE)):
+          # Keep unnamed dimensions or ones where the slice is a no-op.
+          new_names.append(self._index_names[dim])
+          dim += 1
+        elif isinstance(index, (slice, list, np.ndarray)):
+          if isinstance(index, np.ndarray) and len(index.shape) > 1:
+            raise TypeError("What does it mean to index into a named array by "
+                            "a multidimensional array? %s" % index)
+          # Rebuild the index of names for the various forms of slicing.
+          names = sorted(self._index_names[dim].items(),
+                         key=lambda item: item[1])
+          names = np.array(names, dtype=object)  # Support full numpy slicing.
+          sliced = names[index]  # Actually slice it.
+          indexed = {n: j for j, (n, _) in enumerate(sliced)}  # Reindex.
+          if len(sliced) != len(indexed):
+            # Names aren't unique, so drop the names for this dimension.
+            indexed = None
+          new_names.append(indexed)
+          dim += 1
+        else:
+          raise TypeError("Unknown index: %s; %s" % (type(index), index))
+      obj._index_names = new_names + self._index_names[dim:]
+      if len(obj._index_names) != len(obj.shape):
+        raise IndexError("Names don't match object shape: %s != %s" % (
+            len(obj.shape), len(obj._index_names)))
+    return obj
+
+  def __setitem__(self, indices, value):
+    super(NamedNumpyArray, self).__setitem__(self._indices(indices), value)
+
+  def __getslice__(self, i, j):  # deprecated, but still needed...
+    # https://docs.python.org/2.0/ref/sequence-methods.html
+    return self[max(0, i):max(0, j):]
+
+  def __setslice__(self, i, j, seq):  # deprecated, but still needed...
+    self[max(0, i):max(0, j):] = seq
+
+  def __repr__(self):
+    """A repr, parsing the original and adding the names param."""
+    names = []
+    for dim_names in self._index_names:
+      if dim_names:
+        dim_names = [n for n, _ in sorted(dim_names.items(),
+                                          key=lambda item: item[1])]
+        if len(dim_names) > 11:
+          dim_names = dim_names[:5] + ["..."] + dim_names[-5:]
+      names.append(dim_names)
+    if len(names) == 1:
+      names = names[0]
+
+    # "NamedNumpyArray([1, 3, 6], dtype=int32)" ->
+    # ["NamedNumpyArray", "[1, 3, 6]", ", dtype=int32"]
+    matches = re.findall(r"^(\w+)\(([\d\., \n\[\]]*)(,\s+\w+=.+)?\)$",
+                         np.array_repr(self))[0]
+    space = "\n               " if matches[2] and matches[2][1] == "\n" else ""
+    return "%s(%s,%s %s%s)" % (
+        matches[0], matches[1], space, names, matches[2])
+
+  def __reduce__(self):
+    # Support pickling: https://stackoverflow.com/a/26599346
+    state = super(NamedNumpyArray, self).__reduce__()  # pytype: disable=attribute-error
+    assert len(state) == 3  # Verify numpy hasn't changed their protocol.
+    return (state[0], state[1], state[2] + (self._index_names,))
+
+  def __setstate__(self, state):
+    # Support pickling: https://stackoverflow.com/a/26599346
+    self._index_names = state[-1]
+    super(NamedNumpyArray, self).__setstate__(state[0:-1])  # pytype: disable=attribute-error
+
+  def _indices(self, indices):
+    """Turn all string indices into int indices, preserving ellipsis."""
+    if isinstance(indices, tuple):
+      out = []
+      dim = 0
+      for i, index in enumerate(indices):
+        if index is Ellipsis:
+          out.append(index)
+          dim = len(self.shape) - len(indices) + i + 1
+        elif index is np.newaxis:
+          out.append(None)
+        else:
+          out.append(self._get_index(dim, index))
+          dim += 1
+      return tuple(out)
+    else:
+      return self._get_index(0, indices)
+
+  def _get_index(self, dim, index):
+    """Turn a string into a real index, otherwise return the index."""
+    if isinstance(index, six.string_types):
+      try:
+        return self._index_names[dim][index]
+      except KeyError:
+        raise KeyError("Name '%s' is invalid for axis %s." % (index, dim))
+      except TypeError:
+        raise TypeError(
+            "Trying to access an unnamed axis %s by name: '%s'" % (dim, index))
+    else:
+      return index
+
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""A basic Point class."""
+
+import collections
+import math
+import random
+
+class Point(collections.namedtuple("Point", ["x", "y"])):
+    """A basic Point class."""
+    __slots__ = ()
+
+    @classmethod
+    def build(cls, obj):
+        """Build a Point from an object that has properties `x` and `y`."""
+        return cls(obj.x, obj.y)
+    
+    def dist(self, other):
+        """Distance to some other point."""
+        dx = self.x - other.x
+        dy = self.y - other.y
+        return math.sqrt(dx**2 + dy**2)
+    
+    def round(self):
+        """Round `x` and `y` to integers."""
+        return Point(int(round(self.x)), int(round(self.y)))
+    
+    def floor(self):
+        """Round `x` and `y` down to integers."""
+        return Point(int(math.floor(self.x)), int(math.floor(self.y)))
+    
+    def ceil(self):
+        """Round `x` and `y` up to integers."""
+        return Point(int(math.ceil(self.x)), int(math.ceil(self.y)))
+
+    def abs(self):
+        """Round `x` and `y` up to integers."""
+        return Point(int(abs(self.x)), int(abs(self.y)))
+
+    def normalized(self):
+        """Scale `x` and `y` in-between (0, 1)"""
+        return Point(self.x / self.len(), self.y / self.len())
+
+    def len(self):
+        """Length of the vector to this point."""
+        return math.sqrt(self.x**2 + self.y**2)
+
+    def transpose(self):
+        """Flip x and y."""
+        return Point(self.y, self.x)
+    
+    def rotate_deg(self, angle):
+        return self.rotate_rad(math.radians(angle))
+
+    def rotate_rad(self, angle):
+        return Point(self.x * math.cos(angle) - self.y * math.sin(angle),
+                 self.x * math.sin(angle) + self.y * math.cos(angle))
+
+    def rotate_rand(self, angle=180):
+        return self.rotate_deg(random.uniform(-angle, angle))
+
+    def __str__(self):
+      if all(isinstance(v, int) for v in self):
+        return "%d,%d" % self
+      else:
+        return "%.6f,%.6f" % self
+
+    def __neg__(self):
+        return Point(-self.x, -self.y)
+
+    def __add__(self, pt_or_val):
+      if isinstance(pt_or_val, Point):
+          return Point(self.x + pt_or_val.x, self.y + pt_or_val.y)
+      else:
+          return Point(self.x + pt_or_val, self.y + pt_or_val)
+
+    def __sub__(self, pt_or_val):
+      if isinstance(pt_or_val, Point):
+          return Point(self.x - pt_or_val.x, self.y - pt_or_val.y)
+      else:
+          return Point(self.x - pt_or_val, self.y - pt_or_val)
+
+    def __mul__(self, pt_or_val):
+      if isinstance(pt_or_val, Point):
+          return Point(self.x * pt_or_val.x, self.y * pt_or_val.y)
+      else:
+          return Point(self.x * pt_or_val, self.y * pt_or_val)
+
+    def __truediv__(self, pt_or_val):
+      if isinstance(pt_or_val, Point):
+          return Point(self.x / pt_or_val.x, self.y / pt_or_val.y)
+      else:
+          return Point(self.x / pt_or_val, self.y / pt_or_val)
+
+    def __floordiv__(self, pt_or_val):
+      if isinstance(pt_or_val, Point):
+          return Point(int(self.x // pt_or_val.x), int(self.y // pt_or_val.y))
+      else:
+          return Point(int(self.x // pt_or_val), int(self.y // pt_or_val))
+
+    __div__ = __truediv__
+  
+origin = Point(0, 0)
+
+# Copyright 2018 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Define a flag type for points."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+from absl import flags
+import six
+
+from pylol.lib import point
+
+# Let absl.flags know that DEFINE_point should show up in the caller's module.
+flags.disclaim_key_flags()
+
+
+class PointParser(flags.ArgumentParser):
+  """Parse a flag into a pysc2.lib.point.Point."""
+
+  def parse(self, argument):
+    if not argument or argument == "0":
+      return None
+
+    if isinstance(argument, int):
+      args = [argument]
+    elif isinstance(argument, (list, tuple)):
+      args = argument
+    elif isinstance(argument, six.string_types):
+      args = argument.split(",")
+    else:
+      raise ValueError(
+          "Invalid point: '%r'. Valid: '<int>' or '<int>,<int>'." % argument)
+
+    args = [int(v) for v in args]
+
+    if len(args) == 1:
+      args *= 2
+    if len(args) == 2:
+      return point.Point(args[0], args[1])
+    raise ValueError(
+        "Invalid point: '%s'. Valid: '<int>' or '<int>,<int>'." % argument)
+
+  def flag_type(self):
+    return "pysc2.lib.point.Point"
+
+
+class PointSerializer(flags.ArgumentSerializer):
+  """Custom serializer for pysc2.lib.point.Point."""
+
+  def serialize(self, value):
+    return str(value)
+
+
+def DEFINE_point(name, default, help_string, flag_values=flags.FLAGS, **args):  # pylint: disable=invalid-name,redefined-builtin
+  """Registers a flag whose value parses as a point."""
+  flags.DEFINE(PointParser(), name, default, help_string, flag_values,
+               PointSerializer(), **args)
+
+
+# Copyright 2018 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""portpicker for multiple ports."""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import time
+import portpicker
+
+# The set of ports returned by pick_contiguous_unused_ports and not by
+# the underlying portpicker.
+_contiguous_ports = set()
+
+
+def pick_unused_ports(num_ports, retry_interval_secs=1, retry_attempts=5):
+  """Reserves and returns a list of `num_ports` unused ports."""
+  if num_ports <= 0:
+    raise ValueError("Number of ports, must be >= 1, got: %s" % num_ports)
+  ports = set()
+  for _ in range(retry_attempts):
+    ports.update(
+        portpicker.pick_unused_port() for _ in range(num_ports - len(ports)))
+    ports.discard(None)  # portpicker returns None on error.
+    if len(ports) == num_ports:
+      return list(ports)
+    # Duplicate ports can be returned, especially when insufficient ports are
+    # free. Wait for more ports to be freed and retry.
+    time.sleep(retry_interval_secs)
+
+  # Could not obtain enough ports. Release what we do have.
+  return_ports(ports)
+
+  raise RuntimeError("Unable to obtain %d unused ports." % num_ports)
+
+
+def pick_contiguous_unused_ports(
+    num_ports,
+    retry_interval_secs=1,
+    retry_attempts=5):
+  """Reserves and returns a list of `num_ports` contiguous unused ports."""
+  if num_ports <= 0:
+    raise ValueError("Number of ports, must be >= 1, got: %s" % num_ports)
+  for _ in range(retry_attempts):
+    start_port = portpicker.pick_unused_port()
+    if start_port is not None:
+      ports = [start_port + p for p in range(num_ports)]
+      if all(portpicker.is_port_free(p) for p in ports):
+        _contiguous_ports.update(ports[1:])
+        return ports
+      else:
+        portpicker.return_port(start_port)
+
+    time.sleep(retry_interval_secs)
+
+  raise RuntimeError("Unable to obtain %d contiguous unused ports." % num_ports)
+
+
+def return_ports(ports):
+  """Returns previously reserved ports so that may be reused."""
+  for port in ports:
+    if port in _contiguous_ports:
+      _contiguous_ports.discard(port)
+    else:
+      portpicker.return_port(port)
+
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Protocol library to make communication easy."""
+
+import redis
+
+class ConnectionError(Exception):
+    """Failed to read/write a message, details in the error string."""
+    pass
+
+class ProtocolError(Exception):
+    """Redis responded with an error message likely due to a bad request or bug."""
+    pass
+
+class LeagueProtocol(object):
+    """Defines the protocol for chatting with the GameServer."""
+
+    def __init__(self, host, port, timeout_seconds):
+        self.host = host
+        self.port = port
+        self.pool = redis.ConnectionPool(host=host, port=port, db=0)
+        self.r = redis.Redis(connection_pool=self.pool)
+        self.timeout = timeout_seconds
+        self._client = None
+
+    def close(self):
+        pass
+    
+    """
+    def send(self, **kwargs):
+        #Create and send a specific request, and return the response.#
+    """
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Controllers take actions and generates observations."""
+
+import sys
+import platform
+
+from absl import logging
+from absl import flags
+# from pylol.lib import protocol
+
+import redis
+import json
+import subprocess
+from subprocess import SubprocessError
+
+import math
+
+flags.DEFINE_bool("lol_log_actions", False, "Print all actions sent to GameServer.")
+flags.DEFINE_integer("lol_timeout", 60, "Timeout to connect and wait for RPC responses.")
+FLAGS = flags.FLAGS
+
+class ConnectError(Exception):
+    pass
+
+class RequestError(Exception):
+    def __init__(self, desc, res):
+        super(RequestError, self).__init__(desc)
+        self.res = res
+
+class RemoteController(object):
+    """Implements a python interface to interact with the GameServer binary.
+
+    Currently uses Redis to manage this.
+
+    All of these are implemented as blocking calls, so wait for the response
+    before returning.
+    """
+
+    def __init__(self, settings, host, port, timeout_seconds, proc=None, kwargs=[]):
+        self._kwargs = kwargs
+
+        timeout_seconds = timeout_seconds # or FLAGS.lol_timeout
+        host = host or "192.168.0.16"
+        port = port or 6379
+        self.host = host
+        self.port = port
+        print("CONNECTING TO REDIS ON:", host, self._kwargs["redis_port"])
+        self.pool = redis.ConnectionPool(host=host, port=self._kwargs["redis_port"], db=0)
+        self.r = redis.Redis(connection_pool=self.pool)
+        self.timeout = timeout_seconds
+        self.settings = settings
+        self._last_obs = None
+        self._client = None
+        
+        self._kwargs["client_port"] = self._kwargs["client_port"] if "client_port" in kwargs \
+                                      else "5119"
+
+        print("REDIS PORT:", self._kwargs["redis_port"])
+
+        try:
+            arr = ["redis-server",
+                "--bind", str(host),
+                "--port", str(self._kwargs["redis_port"])]
+            print("REDIS ARGS:", arr)
+            self._proc = subprocess.Popen(arr)
+        except SubprocessError as e:
+            print("Could not open redis. Error message: '%s'" % e)
+    
+    def close(self):
+        """Kill the redis process when the controller is done."""
+        self._proc.kill()
+        # self._client.kill() doesn't kill the associated league client
+    
+    def connect(self):
+        """Waits until clients can join the GameServer then waits until agents can connect."""
+
+        # Wait until clients can join
+        json_txt = self.r.brpop("observation", self.timeout) # Shouldn't be longer than this, will check though
+        if json_txt == None:
+            print("`clients_join` == NONE")
+            raise ConnectionError("Couldn't get `clients_join` message from GameServer")
+        else:
+            command = json.loads(json_txt[1].decode("utf-8"))
+            if command == "clients_join":
+                print("`clients_join` == START CLIENT:", command)
+                if self._kwargs["human_observer"]:
+                    print("STARTING LOL ON:", self.host, self._kwargs["client_port"])
+                    self._client = start_client(
+                        host=self.host,
+                        port=self._kwargs["client_port"],
+                        client_dir=self._kwargs["client_dir"])
+                else:
+                    self._client = None
+            else:
+                print("`clients_join` == WRONG MESSAGE:", command)
+                raise ConnectionError("Couldn't get `clients_join` message from GameServer")
+        
+        # Wait until agents can connect (dependend on how long client takes to load, timing issue...)
+        json_txt = self.r.brpop("observation", 60)
+        if json_txt == None:
+            print("`game_started` == NONE")
+            raise ConnectionError("Couldn't get `game_started` message from GameServer")
+        else:
+            command = json.loads(json_txt[1].decode("utf-8"))
+            if command == "game_started":
+                print("`game_started` == START CLIENT:", command)
+                print("Running AI agents")
+            else:
+                print("`game_started` == WRONG MESSAGE:", command)
+                raise ConnectionError("Couldn't get `game_started` message from GameServer")
+        
+        # Reset pipes after connecting
+        self.r.delete("action") # Reset action pipe
+        
+    def send_raw_action(self, action):
+        # print("action data:", action)
+
+        action_type = action["action_type"]
+        action_data = action["action_data"]
+
+        self.r.lpush("action", action_type)
+        self.r.lpush("action", action_data)
+
+    # Check if someone died for this observation
+    def someone_died(self, observation):
+        champ_units = observation["champ_units"]
+        for champ_unit in champ_units:
+            if champ_unit["alive"] == 0.0:
+                return True
+        return False
+
+    def observe(self):
+        """Get a current observation."""
+
+        # Start observing if we haven't already.
+        if self._last_obs == None:
+            self.r.delete("observation") # Reset observation pipe
+            self.r.delete("command")
+            self.r.lpush("command", "start_observing") # Start observing
+
+            # self.players_reset()
+
+        # Get the observation
+        json_txt = self.r.brpop("observation", self.timeout)
+        if json_txt == None:
+            print("Error: Observation timed out")
+            return None
+        else:
+            obs = json.loads(json_txt[1].decode("utf-8"))
+            
+            # Print first observation for testing...
+            # if self._last_obs == None: print("FIRST OBSERVATION:", obs)
+            
+            self._last_obs = obs
+            return obs
+    
+    def actions(self, req_action):
+        """Send an action request, which may include multiple actions."""
+        """
+        if FLAGS.lol_log_actions and req_action.actions:
+            sys.stderr.write(" Sending actions ".center(60, ">") + "\n")
+            for action in req_action.actions:
+                sys.stderr.write(str(action))
+        """
+        
+        """Actually perform the actions here."""
+        for action in req_action.actions:
+            action = action.props
+            if action["type"] == "no_op":
+                playerId = action["user_id"]
+                self.player_noop()
+            elif action["type"] == "move":
+                playerId = action["user_id"]
+                x = action["move_range"].x - 4
+                y = action["move_range"].y - 4
+                # print("SENDING MOVE COMMAND:", x, y)
+                self.player_move(playerId, x, y)
+            elif action["type"] == "spell":
+                playerId = action["user_id"]
+                spell_slot = action["spell"]
+                x = action["position"].x
+                y = action["position"].y
+                self.player_spell(playerId, 2, spell_slot, x, y)
+
+    def act(self, action):
+        """Send a single action. This is a shortcut for `actions`."""
+        if action:
+            return self.actions(action)
+        
+    def quit(self):
+        """Shut down the redis process."""
+        self.r = None
+        self._proc.kill()
+
+    def player_attack(self, player_id, target_player_id):
+        action = {
+            "player_id": str(player_id),
+            "target_player_id": str(target_player_id)
+        }
+        self.r.lpush("action", "attack")
+        self.r.lpush("action", json.dumps(action))
+        
+        return {"type": "attack", "data": action}
+
+    def broadcast_msg(self, msg):
+        if msg:
+            action = {
+                "msg": str(msg)
+            }
+            self.r.lpush("action", "message")
+            self.r.lpush("action", json.dumps(action))
+            return {"type": "message", "data": action}
+
+    def player_spell(self, player_id, target_player_id, spell_slot, x, y):
+        action = {
+            "player_id": str(player_id),
+            "target_player_id": str(target_player_id),
+            "spell_slot": int(spell_slot),
+            "x": float(x * 1.0),
+            "y": float(y * 1.0)
+        }
+        self.r.lpush("action", "spell")
+        self.r.lpush("action", json.dumps(action))
+        return {"type": "spell", "data": action}
+
+    def players_reset(self):
+        print("RESETTING PLAYERS")
+        self.r.lpush("action", "reset")
+        self.r.lpush("action", "")
+
+    def player_move(self, player_id, x, y):
+        # print("player_move: ", id, x, y, self.r)
+        action = {
+            "player_id": str(player_id),
+            "x": float(x * 100.0),
+            "y": float(y * 100.0)
+        }
+        self.r.lpush("action", "move")
+        self.r.lpush("action", json.dumps(action))
+        return {"type": "move", "data": action}
+
+    def player_move_to(self, player_id, x, y):
+        action = {
+            "player_id": str(player_id),
+            "x": float(x),
+            "y": float(y)
+        }
+        self.r.lpush("action", "move_to")
+        self.r.lpush("action", json.dumps(action))
+
+    def player_teleport(self, player_id, x, y):
+        action = {
+            "player_id": str(player_id),
+            "x": float(x),
+            "y": float(y)
+        }
+        self.r.lpush("action", "teleport")
+        self.r.lpush("action", json.dumps(action))
+
+    def player_noop(self, n=1):
+        for i in range(n):
+            self.r.lpush("action", "noop")
+            self.r.lpush("action", "")
+        return {"type": "noop", "data": ""}
+
+    def player_change(self, player_id, champion_name):
+        command = {
+            "player_id": player_id,
+            "champion_name": champion_name
+        }
+        self.r.lpush("command", "change_champion")
+        self.r.lpush("command", json.dumps(command))
+
+    def restart(self):
+        # No support for outright restarting the game within the GameServer at the moment
+        pass
+
+    def save_replay(self):
+        """Save a replay, returning the data."""
+        players = ",".join(["{0}.{1}".format(player.champ, player.team)
+                            for player in self._kwargs["players"]])
+
+        command = {
+            "map": str(self._kwargs["map_name"]),
+            "players": str(players),
+            "multiplier": float(self._kwargs["multiplier"])
+        }
+        self.r.lpush("command", "save_replay")
+        self.r.lpush("command", json.dumps(command))
+
+        replay_json = self.r.brpop("command_data", self.timeout)
+        if replay_json == None:
+            raise ConnectionError("GameServer couldn't provide replay json data")
+        
+        replay_json = replay_json[1].decode("utf-8")
+        return replay_json
+        
+def start_client(host="192.168.0.16", port="5119", client_dir="", playerId="1"):
+    # client_path = "/mnt/c/LeagueSandbox/League_Sandbox_Client/RADS/solutions/lol_game_client_sln/releases/0.0.1.68/deploy/"
+    print("LOL CLIENT HOST, PORT, CLIENT_PATH:", host, port, client_dir)
+    LeagueOfLegendsClient = None
+    LeagueOfLegendsClientArgs = [
+        "./League of Legends.exe",
+        "8394",
+        "",
+        "",
+        "{0} {1} 17BLOhi6KZsTtldTsizvHg== {2}".format(host, port, playerId)
+    ]
+    
+    """
+    # Comment this out if using Windows Subsytem for Linux (WSL)
+    if platform.system() == "Linux":
+        LeagueOfLegendsClientArgs.insert(0, "wine")
+    """
+
+    LeagueOfLegendsClient = subprocess.Popen(LeagueOfLegendsClientArgs, cwd=client_dir)
+    return LeagueOfLegendsClient
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Utilities for replays."""
+
+from pylol.env import lol_env
+
+import json
+
+def get_replay_info(replay_data):
+    # Data
+    data = json.loads(replay_data)
+    
+    # Info
+    info = data["info"]
+    map = info["map"]
+    player_info = info["players"]
+    players = []
+    for player in player_info.split(","):
+        c, t = player.split(".")
+        players.append(lol_env.Agent(champion=c, team=t))
+    multiplier = info["multiplier"]
+
+    # Actions
+    actions = data["actions"]
+    action_count = len(actions)
+
+    # Return dict
+    return {"map": map,
+            "players": players,
+            "multiplier": multiplier,
+            "action_count": action_count}
+
+# Copyright 2017 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""A thread pool for running a set of functions synchronously in parallel.
+
+This is mainly intended for use where the functions have a barrier and none will
+return until all have been called.
+"""
+
+import functools
+
+from concurrent import futures
+
+class RunParallel(object):
+  """Run all funcs in parallel."""
+
+  def __init__(self, timeout=None):
+    self._timeout = timeout
+    self._executor = None
+    self._workers = 0
+
+  def run(self, funcs):
+    """Run a set of functions in parallel, returning their results.
+
+    Make sure any function you pass exits with a reasonable timeout. If it
+    doesn't return within the timeout or the result is ignored due an exception
+    in a separate thread it will continue to stick around until it finishes,
+    including blocking process exit.
+
+    Args:
+      funcs: An iterable of functions or iterable of args to functools.partial.
+
+    Returns:
+      A list of return values with the values matching the order in funcs.
+
+    Raises:
+      Propagates the first exception encountered in one of the functions.
+    """
+    funcs = [f if callable(f) else functools.partial(*f) for f in funcs]
+    if len(funcs) == 1:  # Ignore threads if it's not needed.
+      return [funcs[0]()]
+    if len(funcs) > self._workers:  # Lazy init and grow as needed.
+      self.shutdown()
+      self._workers = len(funcs)
+      self._executor = futures.ThreadPoolExecutor(self._workers)
+    futs = [self._executor.submit(f) for f in funcs]
+    done, not_done = futures.wait(futs, self._timeout, futures.FIRST_EXCEPTION)
+    # Make sure to propagate any exceptions.
+    for f in done:
+      if not f.cancelled() and f.exception() is not None:
+        if not_done:
+          # If there are some calls that haven't finished, cancel and recreate
+          # the thread pool. Otherwise we may have a thread running forever
+          # blocking parallel calls.
+          for nd in not_done:
+            nd.cancel()
+          self.shutdown(False)  # Don't wait, they may be deadlocked.
+        raise f.exception()
+    # Either done or timed out, so don't wait again.
+    return [f.result(timeout=0) for f in futs]
+
+  def shutdown(self, wait=True):
+    if self._executor:
+      self._executor.shutdown(wait)
+      self._executor = None
+      self._workers = 0
+
+  def __del__(self):
+    self.shutdown()
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Helper functions for lib modules which don't belong anywhere else."""
+
+import json
+
+from pylol.env import lol_env
+
+def write_config(config_path, players, map_name, cooldowns_enabled, manacosts_enabled,
+                 minion_spawns_enabled):
+    players = [lol_env.LoLEnvSettingsPlayer(i+1, i+1, player.champ, player.team)
+               for i, player in enumerate(players)]
+
+    settings = lol_env.LoLEnvSettings(players,
+        game = lol_env.LoLEnvSettingsGame(map=lol_env.MAP[map_name]),
+        gameInfo = lol_env.LoLEnvSettingsGameInfo(
+            cooldowns_enabled=cooldowns_enabled,
+            manacosts_enabled=manacosts_enabled,
+            minion_spawns_enabled=minion_spawns_enabled))
+
+    settings = json.dumps(settings, indent=4)
+
+    with open(config_path + "GameInfo.json", "w") as file:
+        file.write(settings)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Copyright 2017 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Define the howling abyss map config."""
+
+from pylol.maps import lib
+
+class HowlingAbyss(lib.Map):
+    players = 10
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""The library and base Map for map definitions.
+
+To use a map, either import the map module and instantiate the map directly, or
+import the maps lib and use `ghet`. Using `get` from this lib will work, but only
+if you've imported the map module somewhere.
+"""
+
+from absl import logging
+import os
+
+class DuplicateMapError(Exception):
+    pass
+
+class NoMapError(Exception):
+    pass
+
+class Map(object):
+    """Base map object to configure a map. To define a map just subclass this.
+
+    Attributes:
+        name: The name of the map/class.
+        players: Max number of players for this map
+    """
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+    
+    @classmethod
+    def all_subclasses(cls):
+        """An iterator over all subclasses of `cls`."""
+        for s in cls.__subclasses__():
+            yield s
+            for c in s.all_subclasses():
+                yield c
+
+def get_maps():
+    """Get the full dict of maps {map_name: map_class}."""
+    maps = {}
+    for mp in Map.all_subclasses():
+        if mp.__name__:
+            map_name = mp.__name__
+            if map_name in maps:
+                raise DuplicateMapError("Duplicate map found: " + map_name)
+            maps[map_name] = mp
+    return maps
+
+def get(map_name):
+    """Get an instance of a map by name. Errors if the map doesn't exist."""
+    if isinstance(map_name, Map):
+        return map_name
+
+    # Get the list of maps. This isn't at module scope to avoid problems of maps
+    # being defined after this module is imported.
+    maps = get_maps()
+    map_class = maps.get(map_name)
+    if map_class:
+        return map_class()
+    raise NoMapError("Map doesn't exist: %s" % map_name)
+
+# Copyright 2017 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Define the new summoners rift map config."""
+
+from pylol.maps import lib
+
+class NewSummonersRift(lib.Map):
+    players = 10
+
+# Copyright 2017 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS-IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Define the old summoners rift map config."""
+
+from pylol.maps import lib
+
+class OldSummonersRift(lib.Map):
+    players = 10
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Register/import the maps, and offer a way to create one by name.
+
+Users of maps should import this moudle:
+    from pylol import maps
+and create the maps by name:
+    maps.get("MapName")
+"""
+
+from pylol.maps import lib
+
+get = lib.get
+get_maps = lib.get_maps
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Configs for various ways to run League of Legends v4.20."""
+
+import datetime
+import os
+import uuid
+
+Exists = os.path.exists
+IsDirectory = os.path.isdir
+ListDir = os.listdir
+MakeDirs = os.makedirs
+Open = open
+
+class RunConfig(object):
+    """Base class for different run configs."""
+
+    def __init__(self, replay_dir, cwd=None, env=None):
+        """Initialize the runconfig with the various directories needed.
+        
+        Args: Where to find the custom replays for the pylol project, not the
+        same as actual Legends of Legends v4.20 replays.
+        """
+        self.replay_dir = replay_dir
+        self.cwd = cwd
+        self.env = env
+
+    def start(self, **kwargs):
+        raise NotImplementedError()
+    
+    @classmethod
+    def priority(cls):
+        """None means this isn't valid. Run the one with the max priority."""
+        return None
+        
+    @classmethod
+    def all_subclasses(cls):
+        """An iterator over all subclasses of `cls`."""
+        for s in cls.__subclasses__():
+            yield s
+            for c in s.all_subclasses():
+                yield c
+    
+    @classmethod
+    def name(cls):
+        return cls.__name__
+    
+    def abs_replay_path(self, replay_path):
+        """Return the absolute path to the replay, outside the sandbox."""
+        return os.path.join(self.replay_dir, replay_path)
+
+    def save_replay(self, replay_data, replay_dir, prefix=None):
+        """Save a replay to a directory, returning the path to the replay.
+
+        Args:
+            replay_data: The result of controller.save_replay(), whch is a serialised
+                list of the map, players, multiplier and timestamped actions.
+        
+        Returns:
+            The full path where the replay is saved.
+        
+        Raises:
+            ValueError: If the prefix contains the path separator.
+        """
+
+        if not prefix:
+            replay_filename = ""
+        elif os.path.sep in prefix:
+            raise ValueError("Prefix '%s' contains '%s', use replay_dir instead." % (
+                prefix, os.path.sep))
+        else:
+            replay_filename = prefix + "_"
+        
+        now = datetime.datetime.utcnow().replace(microsecond=0)
+        replay_filename += "%s.json" % (now.isoformat("-").replace(":", "-") + "-" + str(uuid.uuid4()))
+        replay_dir = self.abs_replay_path(replay_dir)
+
+        if not Exists(replay_dir):
+            MakeDirs(replay_dir)
+        replay_path = os.path.join(replay_dir, replay_filename)
+        with Open(replay_path, "w") as f:
+            f.write(replay_data)
+        return replay_path
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Configs for how to run GameServerConsole from custom directories on
+different platforms."""
+
+import os
+import platform
+
+from pylol.lib import lol_process
+from pylol.run_configs import lib
+
+class LocalBase(lib.RunConfig):
+    """Base run config for installs."""
+
+    def __init__(self, exec_dir, exec_name, cwd=None, env=None):
+        exec_dir = os.path.expanduser(exec_dir)
+        self.exec_dir = exec_dir
+        self.exec_name = exec_name
+        cwd = cwd and os.path.join(exec_dir, cwd)
+        super(LocalBase, self).__init__(
+            replay_dir=os.path.join(exec_dir, "Replays"), cwd=cwd, env=env)
+        
+    def start(self, **kwargs):
+        """Launch the game."""
+        print("Local Base kwargs:", kwargs)
+
+        if not os.path.isdir(self.exec_dir):
+            raise lol_process.LoLLaunchError(
+                "Failed to run  GameServer at '%s" % self.exec_dir)
+        
+        exec_path = os.path.expanduser(self.exec_dir) + self.exec_name
+
+        if not os.path.exists(exec_path):
+            raise lol_process.LoLLaunchError("No GameServer binary found at: %s" % exec_path)
+        
+        return lol_process.LoLProcess(self, exec_path=exec_path, **kwargs)
+
+class Windows(LocalBase):
+    """Run on windows."""
+    def __init__(self, exec_dir):
+        super(Windows, self).__init__(exec_dir, "GameServerConsole.exe", cwd=exec_dir)
+
+    @classmethod
+    def priority(cls):
+        if platform.system() == "Windows":
+            return 1
+    
+    def start(self, **kwargs):
+        return super(Windows, self).start(**kwargs)
+
+class Linux(LocalBase):
+    """Config to run on Linux."""
+    def __init__(self, exec_dir):
+        super(Linux, self).__init__(exec_dir, "./GameServerConsole", cwd=exec_dir)
+        
+    @classmethod
+    def priority(cls):
+        if platform.system() == "Linux":
+            return 1
+    
+    def start(self, **kwargs):
+        return super(Linux, self).start(**kwargs)
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+#from absl import flags
+
+from pylol.lib import lol_process
+from pylol.run_configs import platforms
+from pylol.run_configs import lib
+
+"""
+flags.DEFINE_string("lol_run_config", None,
+                    "Which run_config to use to spawn the binary.")
+FLAGS = flags.FLAGS
+"""
+
+def get(game_server_dir):
+    """Get the config chosen by flags."""
+    configs = {c.name(): c
+        for c in lib.RunConfig.all_subclasses() if c.priority()}
+    
+    print("List of Run Configs:", configs)
+
+    if not configs:
+        raise lol_process.LoLLaunchError("No valid run_configs found.")
+    
+    #if FLAGS.lol_run_config is None:
+    return max(configs.values(), key=lambda c: c.priority())(game_server_dir)
+
+    """
+    try:
+        return configs[FLAGS.lol_run_config]
+    except KeyError:
+        lol_process.LoLLaunchError(
+        "Invalid run_config. Valid configs are: %s" % (
+            ", ".join(sorted(configs.keys()))))
+    """
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Run a random agent for a few steps."""
+
+from absl.testing import absltest
+
+from pylol.agents import random_agent
+from pylol.env import run_loop
+from pylol.env import lol_env
+from pylol.tests import utils
+
+"""
+class TestRandomAgent(utils.TestCase):
+    def test_random_agent(self):
+        with lol_env.LoLEnv(
+            map_name="Old Summoners Rift"
+        )
+"""
+
+if __name__ == "__main__":
+    absltest.main()
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Unit test tools."""
+
+from absl.testing import absltest
+
+class TestCase(absltest.TestCase):
+    """A test base class which isn't implemented for now."""
+
+    def setUp(self):
+        super(TestCase, self).setUp()
+    
+    def tearDown(self):
+        super(TestCase, self).tearDown()
+
+# MIT License
+# 
+# Copyright (c) 2020 MiscellaneousStuff
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
